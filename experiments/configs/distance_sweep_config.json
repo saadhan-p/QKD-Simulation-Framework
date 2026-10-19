@@ -1,0 +1,26 @@
+{
+    "experiment_name": "distance_sweep",
+    "description": "Distance-dependent performance analysis for Figure 3",
+    "protocols": [
+        "bb84",
+        "sarg04",
+        "aurora"
+    ],
+    "parameters": {
+        "distances_km": [
+            5,
+            10,
+            20,
+            35,
+            50
+        ],
+        "qber": 0.02,
+        "raw_key_length": 1000,
+        "runs_per_config": 167
+    },
+    "output": {
+        "raw_data_file": "experiments/results/raw_data/distance_sweep_runs.csv",
+        "processed_file": "experiments/results/processed/figure_3_data.csv",
+        "figure_file": "experiments/results/figures/fig3_distance_keyrate.png"
+    }
+}

@@ -1,0 +1,26 @@
+{
+    "experiment_name": "qber_sweep",
+    "description": "QBER tolerance analysis for Figure 4",
+    "protocols": [
+        "bb84",
+        "sarg04",
+        "aurora"
+    ],
+    "parameters": {
+        "distance_km": 20,
+        "qber_levels": [
+            0.02,
+            0.05,
+            0.08,
+            0.11,
+            0.15
+        ],
+        "raw_key_length": 1000,
+        "runs_per_config": 167
+    },
+    "output": {
+        "raw_data_file": "experiments/results/raw_data/qber_sweep_runs.csv",
+        "processed_file": "experiments/results/processed/figure_4_data.csv",
+        "figure_file": "experiments/results/figures/fig4_qber_tolerance.png"
+    }
+}

@@ -1,0 +1,14 @@
+version: "3.8"
+
+services:
+  qkd-backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: qkd-backend
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app/backend
+      - ./logs:/app/logs

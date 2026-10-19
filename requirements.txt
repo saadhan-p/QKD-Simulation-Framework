@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+pydantic
+matplotlib
+numpy
+python-dotenv
+pyqt5
+httpx
+websockets
+cryptography
+bitarray
+pytest
+fpdf
+pyqtgraph

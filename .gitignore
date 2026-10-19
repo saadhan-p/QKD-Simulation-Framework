@@ -1,0 +1,27 @@
+# Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Operating System
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/*.log
+*.log
+
+# Temporary / Lock files
+~$*.docx
+~$*.xlsx
+~$*.pptx
+.swp
+*~

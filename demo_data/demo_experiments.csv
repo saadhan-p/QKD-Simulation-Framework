@@ -1,0 +1,4 @@
+timestamp,run_id,protocol,distance_km,attenuation_db_per_km,raw_key_length,sifted_key_length,final_key_length,sifting_efficiency,processing_efficiency,qber,noise_probability,attack_type,execution_time_ms,random_seed,secure,status
+2026-02-06T14:11:12.649043,1,BB84,10.0,0.2,1000,525,236,52.5,23.599999999999998,0.02,0.02,none,28.92,1001,True,success
+2026-02-06T14:11:12.663739,2,SARG04,10.0,0.2,1000,594,308,59.4,30.8,0.02,0.02,none,14.19,1002,True,success
+2026-02-06T14:11:12.701616,3,AURORA,10.0,0.2,1000,880,545,88.0,54.50000000000001,0.02,0.02,none,37.55,1003,True,success
