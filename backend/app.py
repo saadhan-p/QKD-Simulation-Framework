@@ -17,6 +17,9 @@ import time
 import math
 import random
 
+import numpy as np
+import warnings
+
 from .logger_config import configure_logging
 from .protocols.bb84 import run_bb84
 from .protocols.sarg04 import run_sarg04
@@ -224,6 +227,13 @@ async def websocket_endpoint(ws: WebSocket):
 # ──────────────────────────────────────────────────────────────────────────────
 
 def _get_pa_factor(protocol: str, qber: float, security_level: str) -> float:
+    """DEPRECATED: Heuristic per-protocol PA factor without quantum optics derivation.
+    Retained solely for backward compatibility. Do not use for new simulations."""
+    warnings.warn(
+        "_get_pa_factor is deprecated and unphysical; use backend.postprocessing instead",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     proto = protocol.lower()
     if proto == "aurora":
         base_factor = 0.65
@@ -259,178 +269,215 @@ def _check_abort_threshold(protocol: str, qber: float) -> bool:
     return qber > limit
 
 
-def _run_protocol(protocol: str, raw: int, qber: float):
+def _run_protocol(
+    protocol: str,
+    raw: int,
+    qber: float,
+    distance_km: float = 10.0,
+    rng: np.random.Generator | None = None,
+):
+    if rng is None:
+        rng = np.random.default_rng()
     proto = protocol.lower()
+    tx = attenuation(distance_km)
     if proto == "bb84":
-        return run_bb84(raw)
+        return run_bb84(n_sent=raw, rng=rng, eta_ch=tx, e_channel=qber)
+    elif proto == "sarg04":
+        return run_sarg04(n_sent=raw, rng=rng, eta_ch=tx, e_channel=qber)
     elif proto == "aurora":
         return run_aurora(
-            raw_key_length=raw, block_size=200, p_anchor=0.05,
-            paired_angle=0.2, rescue_fraction=0.25,
-            eff_to_verif_qber=0.06, verif_to_eff_qber=0.03, qber=qber,
+            raw_key_length=raw,
+            block_size=200,
+            p_anchor=0.05,
+            paired_angle=0.2,
+            rescue_fraction=0.25,
+            eff_to_verif_qber=0.06,
+            verif_to_eff_qber=0.03,
+            qber=qber,
+            rng=rng,
+            legacy=False,
         )
     elif proto == "b92":
         return run_b92(raw)
     elif proto == "e91":
         return run_e91(raw)
     else:
-        return run_sarg04(raw)
+        return run_sarg04(n_sent=raw, rng=rng, eta_ch=tx, e_channel=qber)
 
 
 async def _run_stream_tick(params: Dict, tick: int, start_time: float) -> Dict:
     """
     Run one lightweight simulation tick and return the broadcast payload.
-
-    To keep the loop fast we run a reduced raw_key_length (300 bits).
-    The key_rate is extrapolated as (final_key_bits / STREAM_INTERVAL).
-    A small random jitter on qber makes the graph look live.
+    Uses physically honest protocol engines with real channel loss.
     """
-    protocol       = params.get("protocol", "bb84")
-    raw            = 300                          # fixed small size for speed
+    protocol       = params.get("protocol", "bb84").lower()
+    raw            = 1000
     base_qber      = float(params.get("qber", 0.02))
     distance       = float(params.get("distance_km", 10.0))
-    det_eff        = float(params.get("detector_efficiency", 0.85))
-    ec_method      = params.get("error_correction", "simple")
-    security_level = params.get("security_level", "medium")
+    det_eff        = float(params.get("detector_efficiency", 0.10))
+    tx             = attenuation(distance)
+    effective_qber = max(0.0, min(0.5, base_qber))
+    rng            = np.random.default_rng()
 
-    # Use exact QBER without artificial jitter for accurate dashboard data
-    effective_qber = max(0.0, min(0.3, base_qber))
-
-    # Channel
-    tx = attenuation(distance)
-
-    # Protocol
-    proto_res = _run_protocol(protocol, raw, effective_qber)
-    sifted_alice = proto_res.get("sifted_alice_bits", [])
-    sifted_bob   = proto_res.get("sifted_bob_bits", [])
-
-    # Apply detector efficiency (drop photons proportionally)
-    if det_eff < 1.0 and sifted_alice:
-        n_keep = max(1, int(len(sifted_alice) * det_eff))
-        sifted_alice = sifted_alice[:n_keep]
-        sifted_bob   = sifted_bob[:n_keep]
-
-    noisy_bob = apply_noise(sifted_bob, effective_qber)
-
-    # Error correction
-    if ec_method == "cascade":
-        alice, corrected_bob, _ = cascade_stub(sifted_alice, noisy_bob)
-    elif ec_method == "ldpc":
-        alice, corrected_bob, _ = ldpc_stub(sifted_alice, noisy_bob)
+    if protocol in ("bb84", "sarg04", "aurora"):
+        proto_res = _run_protocol(protocol, raw, effective_qber, distance_km=distance, rng=rng)
+        final_key_len = proto_res.get("final_key_length_asymptotic", 0)
+        aborted = proto_res.get("aborted", False)
+        measured_qber = proto_res.get("qber_est", effective_qber)
     else:
-        alice, corrected_bob, _ = simple_correction(sifted_alice, noisy_bob)
+        proto_res = _run_protocol(protocol, raw, effective_qber, distance_km=distance, rng=rng)
+        aborted = _check_abort_threshold(protocol, effective_qber)
+        final_key_len = 0 if aborted else max(0, int(raw * 0.1))
+        measured_qber = effective_qber
 
-    # Privacy amplification
-    pa_factor = _get_pa_factor(protocol, effective_qber, security_level)
-    out_len   = max(1, int(len(corrected_bob) * pa_factor))
-    final_key = compress_and_hash(corrected_bob, out_len)
-
-    # Security
-    per_bit_entropy = min_entropy(final_key)
-    entropy_secure  = security_status(len(final_key), effective_qber, per_bit_entropy)
-    qber_abort      = _check_abort_threshold(protocol, effective_qber)
-    secure          = entropy_secure and not qber_abort
-
-    # Key rate: bits produced per second (extrapolate from tick interval)
-    key_rate = len(final_key) / STREAM_INTERVAL
-
+    secure = (not aborted) and (final_key_len > 0)
+    key_rate = final_key_len / STREAM_INTERVAL
     elapsed = time.time() - start_time
 
     return {
         "time":               round(elapsed, 2),
-        "qber":               round(effective_qber, 5),
+        "qber":               round(measured_qber, 5),
         "key_rate":           round(key_rate, 1),
         "distance_km":        round(distance, 2),
         "attenuation":        round(tx, 4),
         "detector_efficiency": round(det_eff, 3),
         "secure":             secure,
-        "anomaly":            effective_qber > QBER_ABORT_BB84,   # universal 11% threshold
+        "anomaly":            aborted or (measured_qber > QBER_ABORT_BB84),
         "protocol":           protocol,
         "tick":               tick,
     }
 
 
 async def _run_simulation_pipeline(params: Dict) -> Dict:
-    protocol       = params.get("protocol", "bb84")
+    protocol       = params.get("protocol", "bb84").lower()
     raw            = int(params.get("raw_key_length", 1000))
     distance       = float(params.get("distance_km", 10.0))
     qber           = float(params.get("qber", 0.02))
     ec_method      = params.get("error_correction", "simple")
     security_level = params.get("security_level", "medium")
+    seed           = params.get("seed")
+    rng            = np.random.default_rng(seed) if seed is not None else np.random.default_rng()
 
-    proto_res = _run_protocol(protocol, raw, qber)
     tx = attenuation(distance)
-    sifted_alice = proto_res.get("sifted_alice_bits", [])
-    sifted_bob   = proto_res.get("sifted_bob_bits", [])
-    noisy_bob    = apply_noise(sifted_bob, qber)
 
-    if ec_method == "cascade":
-        alice, corrected_bob, mismatches = cascade_stub(sifted_alice, noisy_bob)
-    elif ec_method == "ldpc":
-        alice, corrected_bob, mismatches = ldpc_stub(sifted_alice, noisy_bob)
+    if protocol in ("bb84", "sarg04", "aurora"):
+        proto_res = _run_protocol(protocol, raw, qber, distance_km=distance, rng=rng)
+        final_len = proto_res.get("final_key_length_asymptotic", 0)
+        sifted_len = proto_res.get("n_sifted", 0)
+        measured_qber = proto_res.get("qber_est", qber)
+        aborted = proto_res.get("aborted", False)
+        secure = (not aborted) and (final_len > 0)
+
+        return {
+            "protocol_result": {
+                "sifted_key_length": sifted_len,
+                "estimated_qber": measured_qber,
+                "raw_result": proto_res,
+            },
+            "channel":         {"distance_km": distance, "attenuation": tx, "qber": qber},
+            "error_correction": {
+                "method": "leak_ec_model",
+                "leak_ec": proto_res.get("leak_ec", 0),
+                "mismatches": 0,
+                "final_errors": 0,
+            },
+            "privacy":         {
+                "input_length": sifted_len - proto_res.get("n_sampled", 0),
+                "output_length": final_len,
+            },
+            "security":        {
+                "per_bit_entropy": 1.0 if secure else 0.0,
+                "secure": secure,
+                "aborted": aborted,
+                "abort_reason": proto_res.get("abort_reason"),
+            },
+            "final_key_length": final_len,
+            "aborted":         aborted,
+        }
     else:
+        # Legacy fallback for b92, e91
+        proto_res = _run_protocol(protocol, raw, qber, distance_km=distance, rng=rng)
+        sifted_alice = proto_res.get("sifted_alice_bits", [])
+        sifted_bob   = proto_res.get("sifted_bob_bits", [])
+        noisy_bob    = apply_noise(sifted_bob, qber)
         alice, corrected_bob, mismatches = simple_correction(sifted_alice, noisy_bob)
+        qber_abort   = _check_abort_threshold(protocol, qber)
+        if qber_abort:
+            final_key = []
+            secure = False
+        else:
+            pa_factor = _get_pa_factor(protocol, qber, security_level)
+            out_len   = max(1, int(len(corrected_bob) * pa_factor))
+            final_key = compress_and_hash(corrected_bob, out_len)
+            secure    = True
 
-    pa_factor = _get_pa_factor(protocol, qber, security_level)
-    out_len   = max(1, int(len(corrected_bob) * pa_factor))
-    final_key = compress_and_hash(corrected_bob, out_len)
-
-    per_bit_entropy = min_entropy(final_key)
-    entropy_secure  = security_status(len(final_key), qber, per_bit_entropy)
-    qber_abort      = _check_abort_threshold(protocol, qber)
-    secure          = entropy_secure and not qber_abort
-
-    return {
-        "protocol_result": proto_res,
-        "channel":         {"distance_km": distance, "attenuation": tx, "qber": qber},
-        "error_correction": {"method": ec_method, "mismatches": mismatches, "final_errors": 0},
-        "privacy":         {"input_length": len(corrected_bob), "output_length": len(final_key)},
-        "security":        {"per_bit_entropy": per_bit_entropy, "secure": secure},
-        "final_key_length": len(final_key),
-    }
+        per_bit_entropy = min_entropy(final_key) if final_key else 0.0
+        return {
+            "protocol_result": proto_res,
+            "channel":         {"distance_km": distance, "attenuation": tx, "qber": qber},
+            "error_correction": {"method": ec_method, "mismatches": mismatches, "final_errors": 0},
+            "privacy":         {"input_length": len(corrected_bob), "output_length": len(final_key)},
+            "security":        {"per_bit_entropy": per_bit_entropy, "secure": secure},
+            "final_key_length": len(final_key),
+            "aborted":         qber_abort,
+        }
 
 
 async def _run_simulation_stream(params: Dict):
-    protocol       = params.get("protocol", "bb84")
+    protocol       = params.get("protocol", "bb84").lower()
     raw            = int(params.get("raw_key_length", 1000))
     distance       = float(params.get("distance_km", 10.0))
     qber           = float(params.get("qber", 0.02))
-    ec_method      = params.get("error_correction", "simple")
-    security_level = params.get("security_level", "medium")
+    seed           = params.get("seed")
+    rng            = np.random.default_rng(seed) if seed is not None else np.random.default_rng()
 
     yield {"status": "start", "params": params}
 
-    proto_res = _run_protocol(protocol, raw, qber)
-    yield {"step": "protocol", "protocol": protocol.lower(), "data": proto_res}
+    tx = attenuation(distance)
+    yield {"step": "channel", "attenuation": round(tx, 4), "qber": qber, "distance_km": distance}
     await asyncio.sleep(0.01)
 
-    tx           = attenuation(distance)
-    sifted_alice = proto_res.get("sifted_alice_bits", [])
-    sifted_bob   = proto_res.get("sifted_bob_bits", [])
-    noisy_bob    = apply_noise(sifted_bob, qber)
-    yield {"step": "channel", "attenuation": tx, "qber": qber, "sifted_len": len(sifted_alice)}
-    await asyncio.sleep(0.01)
+    if protocol in ("bb84", "sarg04", "aurora"):
+        proto_res = _run_protocol(protocol, raw, qber, distance_km=distance, rng=rng)
+        sifted_len = proto_res.get("n_sifted", 0)
+        measured_qber = proto_res.get("qber_est", qber)
+        final_len = proto_res.get("final_key_length_asymptotic", 0)
+        aborted = proto_res.get("aborted", False)
+        secure = (not aborted) and (final_len > 0)
 
-    if ec_method == "cascade":
-        alice, corrected_bob, mismatches = cascade_stub(sifted_alice, noisy_bob)
-    elif ec_method == "ldpc":
-        alice, corrected_bob, mismatches = ldpc_stub(sifted_alice, noisy_bob)
+        yield {"step": "protocol", "protocol": protocol, "sifted_len": sifted_len}
+        await asyncio.sleep(0.01)
+
+        yield {
+            "step": "error_correction",
+            "method": "leak_ec_model",
+            "leak_ec_bits": proto_res.get("leak_ec", 0),
+            "estimated_qber": measured_qber,
+        }
+        await asyncio.sleep(0.01)
+
+        yield {
+            "step": "privacy",
+            "input_length": sifted_len - proto_res.get("n_sampled", 0),
+            "output_length": final_len,
+        }
+        await asyncio.sleep(0.01)
+
+        yield {
+            "step": "security",
+            "per_bit_entropy": 1.0 if secure else 0.0,
+            "secure": secure,
+            "aborted": aborted,
+            "abort_reason": proto_res.get("abort_reason"),
+        }
+        await asyncio.sleep(0.01)
+
+        yield {"status": "done", "final_key_length": final_len}
     else:
-        alice, corrected_bob, mismatches = simple_correction(sifted_alice, noisy_bob)
-    yield {"step": "error_correction", "method": ec_method, "mismatches": mismatches, "final_errors": 0}
-    await asyncio.sleep(0.01)
-
-    pa_factor = _get_pa_factor(protocol, qber, security_level)
-    out_len   = max(1, int(len(corrected_bob) * pa_factor))
-    final_key = compress_and_hash(corrected_bob, out_len)
-    yield {"step": "privacy", "input_length": len(corrected_bob), "output_length": len(final_key)}
-    await asyncio.sleep(0.01)
-
-    per_bit_entropy = min_entropy(final_key)
-    entropy_secure  = security_status(len(final_key), qber, per_bit_entropy)
-    qber_abort      = _check_abort_threshold(protocol, qber)
-    secure          = entropy_secure and not qber_abort
-    yield {"step": "security", "per_bit_entropy": per_bit_entropy, "secure": secure}
-    await asyncio.sleep(0.01)
-
-    yield {"status": "done", "final_key_length": len(final_key)}
+        # Legacy fallback
+        res = await _run_simulation_pipeline(params)
+        yield {"step": "protocol", "protocol": protocol, "data": res.get("protocol_result")}
+        await asyncio.sleep(0.01)
+        yield {"step": "security", "secure": res.get("security", {}).get("secure", False)}
+        await asyncio.sleep(0.01)
+        yield {"status": "done", "final_key_length": res.get("final_key_length", 0)}
