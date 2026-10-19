@@ -15,8 +15,9 @@
             50
         ],
         "qber": 0.02,
-        "raw_key_length": 1000,
-        "runs_per_config": 167
+        "raw_key_length": 100000,
+        "runs_per_config": 20,
+        "seed": 2024
     },
     "output": {
         "raw_data_file": "experiments/results/raw_data/distance_sweep_runs.csv",
