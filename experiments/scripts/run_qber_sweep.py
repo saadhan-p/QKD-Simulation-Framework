@@ -9,8 +9,11 @@ import json
 import csv
 import time
 import asyncio
+import argparse
 from pathlib import Path
 from datetime import datetime
+
+import numpy as np
 
 # Add backend to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -23,15 +26,21 @@ def load_config(config_path):
     with open(config_path, 'r') as f:
         return json.load(f)
 
-async def run_qber_sweep(config):
-    """Run QBER sweep experiments"""
+async def run_qber_sweep(config, base_seed: int | None = None):
+    """Run QBER sweep experiments with deterministic seeded streams."""
+    seed = base_seed if base_seed is not None else config.get('parameters', {}).get('seed', 2024)
     print(f"Starting {config['experiment_name']}...")
     print(f"Description: {config['description']}")
+    print(f"Base seed: {seed}")
     print(f"Total runs: {len(config['protocols'])} protocols × {len(config['parameters']['qber_levels'])} QBER levels × {config['parameters']['runs_per_config']} runs")
     
     total_runs = len(config['protocols']) * len(config['parameters']['qber_levels']) * config['parameters']['runs_per_config']
     print(f"Total simulations: {total_runs}\n")
     
+    ss = np.random.SeedSequence(seed)
+    child_seeds = ss.spawn(total_runs)
+    child_idx = 0
+
     # Prepare output file
     output_file = Path(config['output']['raw_data_file'])
     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -56,6 +65,8 @@ async def run_qber_sweep(config):
             
             for run_num in range(1, config['parameters']['runs_per_config'] + 1):
                 run_count += 1
+                run_seed = child_seeds[child_idx]
+                child_idx += 1
                 
                 # Create simulation parameters
                 params = {
@@ -64,7 +75,8 @@ async def run_qber_sweep(config):
                     'qber': qber,
                     'distance_km': config['parameters']['distance_km'],
                     'security_level': 'medium',
-                    'error_correction': 'simple'
+                    'error_correction': 'simple',
+                    'seed': run_seed,
                 }
                 
                 # Run simulation
@@ -124,14 +136,22 @@ async def run_qber_sweep(config):
 
 async def main():
     """Main entry point"""
-    config_path = Path(__file__).parent.parent / 'configs' / 'qber_sweep_config.json'
+    parser = argparse.ArgumentParser(description="Run QBER sweep experiments")
+    parser.add_argument("--config", type=str, default=None, help="Path to custom config JSON")
+    parser.add_argument("--seed", type=int, default=None, help="Base random seed for reproducibility")
+    args = parser.parse_args()
+
+    if args.config:
+        config_path = Path(args.config)
+    else:
+        config_path = Path(__file__).parent.parent / 'configs' / 'qber_sweep_config.json'
     
     if not config_path.exists():
         print(f"❌ Config file not found: {config_path}")
         sys.exit(1)
     
     config = load_config(config_path)
-    results = await run_qber_sweep(config)
+    results = await run_qber_sweep(config, base_seed=args.seed)
     
     print(f"\n{'='*60}")
     print("Next steps:")
