@@ -1,27 +1,43 @@
-# Environments
-.venv/
-venv/
-ENV/
-env/
-
-# Python cache
+# Python / bytecode
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
-.pytest_cache/
 
-# Operating System
+# Virtual environments
+.venv/
+.venv2/
+venv/
+ENV/
+env/
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs and large outputs
+logs/*.log
+*.log
+experiments/results/raw_data/*.csv
+experiments/results/processed/*.csv
+experiments/results/figures/*.png
+
+# OS artefacts
 .DS_Store
 Thumbs.db
 
-# Logs
-logs/*.log
-*.log
-
-# Temporary / Lock files
+# Editor
+.swp
+*~
 ~$*.docx
 ~$*.xlsx
 ~$*.pptx
-.swp
-*~
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Build / dist
+build/
+dist/
+*.egg-info/
