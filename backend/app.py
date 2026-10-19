@@ -275,15 +275,16 @@ def _run_protocol(
     qber: float,
     distance_km: float = 10.0,
     rng: np.random.Generator | None = None,
+    sample_min: int = 100,
 ):
     if rng is None:
         rng = np.random.default_rng()
     proto = protocol.lower()
     tx = attenuation(distance_km)
     if proto == "bb84":
-        return run_bb84(n_sent=raw, rng=rng, eta_ch=tx, e_channel=qber)
+        return run_bb84(n_sent=raw, rng=rng, eta_ch=tx, e_channel=qber, sample_min=sample_min)
     elif proto == "sarg04":
-        return run_sarg04(n_sent=raw, rng=rng, eta_ch=tx, e_channel=qber)
+        return run_sarg04(n_sent=raw, rng=rng, eta_ch=tx, e_channel=qber, sample_min=sample_min)
     elif proto == "aurora":
         return run_aurora(
             raw_key_length=raw,
@@ -296,13 +297,14 @@ def _run_protocol(
             qber=qber,
             rng=rng,
             legacy=False,
+            sample_min=sample_min,
         )
     elif proto == "b92":
         return run_b92(raw)
     elif proto == "e91":
         return run_e91(raw)
     else:
-        return run_sarg04(n_sent=raw, rng=rng, eta_ch=tx, e_channel=qber)
+        return run_sarg04(n_sent=raw, rng=rng, eta_ch=tx, e_channel=qber, sample_min=sample_min)
 
 
 async def _run_stream_tick(params: Dict, tick: int, start_time: float) -> Dict:
@@ -311,7 +313,7 @@ async def _run_stream_tick(params: Dict, tick: int, start_time: float) -> Dict:
     Uses physically honest protocol engines with real channel loss.
     """
     protocol       = params.get("protocol", "bb84").lower()
-    raw            = 1000
+    raw            = max(int(params.get("raw_key_length", 5000)), 5000)
     base_qber      = float(params.get("qber", 0.02))
     distance       = float(params.get("distance_km", 10.0))
     det_eff        = float(params.get("detector_efficiency", 0.10))
@@ -320,7 +322,9 @@ async def _run_stream_tick(params: Dict, tick: int, start_time: float) -> Dict:
     rng            = np.random.default_rng()
 
     if protocol in ("bb84", "sarg04", "aurora"):
-        proto_res = _run_protocol(protocol, raw, effective_qber, distance_km=distance, rng=rng)
+        proto_res = _run_protocol(
+            protocol, raw, effective_qber, distance_km=distance, rng=rng, sample_min=20
+        )
         final_key_len = proto_res.get("final_key_length_asymptotic", 0)
         aborted = proto_res.get("aborted", False)
         measured_qber = proto_res.get("qber_est", effective_qber)
