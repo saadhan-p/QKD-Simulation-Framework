@@ -153,7 +153,11 @@ def main(base_seed: int = 2024):
         writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
         writer.writeheader()
         writer.writerows(rows)
-    print(f"\nRaw CSV → {out_path}\n")
+    print(f"\nRaw CSV → {out_path}")
+
+    from experiments.scripts.sweep_metadata import save_sweep_metadata
+    meta_path = save_sweep_metadata(out_path, base_seed)
+    print(f"Metadata → {meta_path}\n")
 
     # ── Print summary table ──
     hdr = f"{'Protocol':<10} {'QBER%':>6} {'sift/det':>9} {'sift/sent':>10} "

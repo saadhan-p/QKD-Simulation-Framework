@@ -143,14 +143,14 @@ Qkd/
 ## 🚀 Quick Start
 
 ### Prerequisites
-- **Python 3.13+**
+- **Python 3.13** (tested with Python 3.13.5)
 - **pip** package manager
 
 ### Installation
 
-1. **Clone/Navigate to the project:**
+1. **Clone/Navigate to the project root:**
    ```bash
-   cd /Users/saadhan/Desktop/Qkd
+   cd /path/to/Qkd
    ```
 
 2. **Install dependencies:**

@@ -122,6 +122,10 @@ async def run_qber_sweep(config, base_seed: int | None = None):
         writer = csv.DictWriter(f, fieldnames=headers)
         writer.writeheader()
         writer.writerows(results)
+
+    from experiments.scripts.sweep_metadata import save_sweep_metadata
+    meta_path = save_sweep_metadata(output_file, seed)
+    print(f"Metadata saved to: {meta_path}")
     
     total_time = time.time() - start_time
     print(f"{'='*60}")
