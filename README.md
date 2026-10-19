@@ -1,5 +1,7 @@
 # QKD Simulation Framework
 
+> **LICENSE PENDING - do not publish**
+
 A comprehensive **Quantum Key Distribution (QKD)** simulation and visualization platform with support for multiple quantum cryptography protocols.
 
 ![Python](https://img.shields.io/badge/python-3.13-blue.svg)
@@ -381,8 +383,9 @@ This is a research/educational project. Feel free to:
 ---
 
 ## 📝 License
-
-Educational and research use.
+ 
+LICENSE PENDING - do not publish.
+Educational and research use only.
 
 ---
 
