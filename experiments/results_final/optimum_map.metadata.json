@@ -1,0 +1,16 @@
+{
+  "timestamp_utc": "2026-10-22T07:26:36.997179+00:00",
+  "git_hash": "183de9e3f95a958f1bf5c3030cb453e74554f61f",
+  "runtime_seconds": 0.035166025161743164,
+  "analysis_summary": {
+    "total_cells": 360,
+    "positive_yield_cells": 260,
+    "avg_loss_minus_0_1_pct": 14.21595201843934,
+    "avg_loss_plus_0_1_pct": 46.26952388673817,
+    "max_loss_plus_0_1_pct": 100.0
+  },
+  "files": {
+    "csv": "experiments/results_final/optimum_map.csv",
+    "png": "experiments/results_final/optimum_map.png"
+  }
+}

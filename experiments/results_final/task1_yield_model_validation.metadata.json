@@ -1,0 +1,9 @@
+{
+  "timestamp_utc": "2026-10-22T07:12:00.133215+00:00",
+  "git_hash": "183de9e3f95a958f1bf5c3030cb453e74554f61f",
+  "python_interpreter": "/Users/saadhan/Drive/MCA_FInal_project/Qkd/.venv/bin/python",
+  "python_version": "3.13.5 | packaged by Anaconda, Inc. | (main, Jun 12 2025, 11:23:37) [Clang 14.0.6 ]",
+  "trials_per_setting": 50,
+  "num_settings": 16,
+  "output_csv": "experiments/results_final/task1_yield_model_validation.csv"
+}
