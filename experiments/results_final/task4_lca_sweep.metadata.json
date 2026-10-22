@@ -1,0 +1,52 @@
+{
+  "timestamp_utc": "2026-10-22T06:59:10.600943+00:00",
+  "git_hash": "6657f42919ea7ffa8368b4da1ff226a62bd204fa",
+  "python_interpreter": "/Users/saadhan/Drive/MCA_FInal_project/Qkd/.venv/bin/python",
+  "python_version": "3.13.5 | packaged by Anaconda, Inc. | (main, Jun 12 2025, 11:23:37) [Clang 14.0.6 ]",
+  "platform": {
+    "system": "Darwin",
+    "release": "27.0.0",
+    "machine": "arm64"
+  },
+  "simulation_parameters": {
+    "distance_km": 20.0,
+    "eta_ch": 0.3981071705534972,
+    "eta_det": 0.1,
+    "dc": 100.0,
+    "dt": 1e-09,
+    "runs_per_cell": 20,
+    "base_seed": 2024,
+    "e_channels": [
+      0.01,
+      0.02,
+      0.05
+    ],
+    "N_values": [
+      100000,
+      1000000,
+      10000000
+    ],
+    "p_key_values": [
+      0.5,
+      0.7,
+      0.9,
+      0.95,
+      0.98
+    ],
+    "ec_leakage_model": "predetermined_q_tol",
+    "f_ec": 1.16,
+    "eps_sec": 1e-10,
+    "eps_cor": 1e-10,
+    "modes": [
+      "tuned",
+      "fixed_conservative_0.06"
+    ]
+  },
+  "runtime_seconds": 162.62343001365662,
+  "total_cells": 90,
+  "total_runs": 1800,
+  "output_files": [
+    "experiments/results_final/task4_lca_sweep.csv",
+    "experiments/results/raw_data/task4_lca_sweep.csv"
+  ]
+}

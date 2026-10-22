@@ -16,13 +16,18 @@ env/
 .coverage
 htmlcov/
 
-# Logs and large outputs
-logs/*.log
-*.log
+# Experiment Results Tracking Policy:
+# - Track small final aggregated result CSVs and metadata in experiments/results_final/
+# - Ignore large raw per-pulse/per-run outputs in experiments/results/raw_data/
+# - Ignore temporary scratch files
 experiments/results/raw_data/*.csv
 !experiments/results/raw_data/task4_*.csv
 experiments/results/processed/*.csv
 experiments/results/figures/*.png
+scratch/*
+!scratch/.gitkeep
+!experiments/results_final/
+!experiments/results_final/**
 
 
 # OS artefacts

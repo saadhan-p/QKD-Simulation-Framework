@@ -18,17 +18,27 @@ Executes the TASK 4 sanity sweep for BB84-LCA:
 from __future__ import annotations
 
 import csv
+import json
 import math
 import os
+import platform
+import subprocess
 import sys
 import time
+from datetime import datetime, timezone
 from typing import Any
+
+# Make script runnable from any directory without PYTHONPATH hacks
+_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
 
 import numpy as np
 
 from backend.channel import attenuation
 from backend.finite_key import compute_mu, truncated_h2
 from backend.protocols.lca import run_lca
+
 
 
 def compute_analytic_optimal_pkey(
@@ -167,18 +177,71 @@ def run_sweep() -> list[dict[str, Any]]:
                             f"abort={cell_summary['abort_rate']:.2f}"
                         )
 
-    # Save to CSV
-    os.makedirs("experiments/results/raw_data", exist_ok=True)
-    csv_path = "experiments/results/raw_data/task4_lca_sweep.csv"
-    with open(csv_path, "w", newline="") as f:
-        fieldnames = list(results[0].keys())
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        for row in results:
-            writer.writerow(row)
-    print(f"\nSaved sweep results to {csv_path}")
-
+    # Save to experiments/results_final (tracked) and legacy raw_data
     elapsed = time.time() - start_time
+    os.makedirs(os.path.join(_REPO_ROOT, "experiments/results_final"), exist_ok=True)
+    os.makedirs(os.path.join(_REPO_ROOT, "experiments/results/raw_data"), exist_ok=True)
+    csv_final = os.path.join(_REPO_ROOT, "experiments/results_final/task4_lca_sweep.csv")
+    csv_raw = os.path.join(_REPO_ROOT, "experiments/results/raw_data/task4_lca_sweep.csv")
+
+    for path in (csv_final, csv_raw):
+        with open(path, "w", newline="") as f:
+            fieldnames = list(results[0].keys())
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            for row in results:
+                writer.writerow(row)
+        print(f"Saved sweep results to {path}")
+
+    # Gather git hash
+    try:
+        git_hash = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=_REPO_ROOT, text=True
+        ).strip()
+    except Exception:
+        git_hash = "unknown"
+
+    metadata = {
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "git_hash": git_hash,
+        "python_interpreter": sys.executable,
+        "python_version": sys.version,
+        "platform": {
+            "system": platform.system(),
+            "release": platform.release(),
+            "machine": platform.machine(),
+        },
+        "simulation_parameters": {
+            "distance_km": distance_km,
+            "eta_ch": eta_ch,
+            "eta_det": eta_det,
+            "dc": dc,
+            "dt": dt,
+            "runs_per_cell": runs_per_cell,
+            "base_seed": base_seed,
+            "e_channels": e_channels,
+            "N_values": N_values,
+            "p_key_values": p_key_values,
+            "ec_leakage_model": "predetermined_q_tol",
+            "f_ec": 1.16,
+            "eps_sec": 1e-10,
+            "eps_cor": 1e-10,
+            "modes": [m[0] for m in modes],
+        },
+        "runtime_seconds": elapsed,
+        "total_cells": total_cells,
+        "total_runs": total_cells * runs_per_cell,
+        "output_files": [
+            "experiments/results_final/task4_lca_sweep.csv",
+            "experiments/results/raw_data/task4_lca_sweep.csv",
+        ],
+    }
+
+    meta_final = os.path.join(_REPO_ROOT, "experiments/results_final/task4_lca_sweep.metadata.json")
+    with open(meta_final, "w") as f:
+        json.dump(metadata, f, indent=2)
+    print(f"Saved metadata to {meta_final}")
+
     print(f"Total sweep execution time: {elapsed:.2f} seconds ({elapsed/60.0:.2f} minutes)")
 
     return results
