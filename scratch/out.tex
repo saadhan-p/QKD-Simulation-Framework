@@ -21,7 +21,7 @@ Corresponding author: Adwitiya Mukhopadhyay  |  adwitiya@my.amrita.edu
 
 \textbf{Abstract}
 
-Quantum Key Distribution (QKD) offers information-theoretically secure key exchange grounded in the laws of quantum mechanics, yet practical deployments face a persistent trade-off between sifting efficiency and robustness against channel noise. Existing protocols such as BB84 and SARG04 operate with fixed sifting strategies, yielding 50.1% and 60.1% sifting efficiency respectively under low-noise conditions, and cannot dynamically adapt to deteriorating channel quality. This paper presents Aurora-QFlux, an integrated full-stack framework comprising two equally weighted contributions: (1) Aurora, a novel adaptive hybrid QKD protocol that dynamically toggles between a high-efficiency Efficient Mode and a secure Verified Mode based on real-time QBER estimation and continuous CHSH entanglement anchor verification, and (2) QFlux, a GPU-accelerated real-time visualization dashboard delivering telemetry at 42.4 ms mean end-to-end latency via WebSocket streaming and circular buffer management. Experimental evaluation across 167 runs per condition — spanning QBER values of 2%–15% and distances of 5–50 km — demonstrates that Aurora achieves 89.0%–93.8% sifting efficiency and produces 2.45×–2.90× more final secure key bits than BB84 across all tested noise levels while maintaining security. At QBER = 15%, all protocols correctly abort with zero key output, validating Aurora's security termination mechanisms. Distance sweeps confirm algorithmic stability (final key std dev < 0.4 bits across 5–50 km). A controlled usability study (n = 12) demonstrates that QFlux reduces parameter tuning time by 74% and NASA-TLX cognitive workload by 52% versus batch-processing baselines (SUS = 82, Excellent). Aurora-QFlux provides the quantum communication community with a unified protocol research and operational monitoring platform.\textbf{Keywords  }Quantum Key Distribution · Aurora protocol · Adaptive hybrid protocol · BB84 · SARG04 · CHSH inequality · Entanglement verification · Real-time visualization · WebSocket · GPU rendering · QFlux · Sifting efficiency · QBER · Post-processing · HCI · NASA-TLX\section{Introduction}
+Quantum Key Distribution (QKD) offers information-theoretically secure key exchange grounded in the laws of quantum mechanics, yet practical deployments face a persistent trade-off between sifting efficiency and robustness against channel noise. Existing protocols such as BB84 and SARG04 operate with fixed sifting strategies, yielding 50.1% and 60.1% sifting efficiency respectively under low-noise conditions, and cannot dynamically adapt to deteriorating channel quality. This paper presents Aurora-QFlux, an integrated full-stack framework comprising two equally weighted contributions: (1) Aurora, a novel adaptive hybrid QKD protocol that dynamically toggles between a high-efficiency Efficient Mode and a secure Verified Mode based on real-time QBER estimation and continuous CHSH entanglement anchor verification, and (2) QFlux, a GPU-accelerated real-time visualization dashboard delivering telemetry at 42.4 ms mean end-to-end latency via WebSocket streaming and circular buffer management. Experimental evaluation across 167 runs per condition — spanning QBER values of 2%–15% and distances of 5–50 km — demonstrates that Aurora achieves 89.0%–93.8% sifting efficiency and produces 2.45×–2.90× more final secure key bits than BB84 across all tested noise levels while maintaining security. At QBER = 15%, all protocols correctly abort with zero key output, validating Aurora's security termination mechanisms. Distance sweeps confirm algorithmic stability (final key std dev < 0.4 bits across 5–50 km). Computational benchmarks demonstrate that QFlux sustains 29.8 FPS rendering at 30 Hz input with 4.1% CPU utilization and bounded 385 MB memory footprint, overcoming the latency and throughput bottlenecks of batch-processing visualization frameworks. Aurora-QFlux provides the quantum communication community with a unified protocol research and operational monitoring platform.\textbf{Keywords  }Quantum Key Distribution · Aurora protocol · Adaptive hybrid protocol · BB84 · SARG04 · CHSH inequality · Entanglement verification · Real-time visualization · WebSocket · GPU rendering · QFlux · Sifting efficiency · QBER · Post-processing · Telemetry benchmarking\section{Introduction}
 Quantum Key Distribution (QKD) represents the most mature application of quantum information science, offering cryptographic key exchange whose security is guaranteed by fundamental physical laws rather than computational assumptions [1, 2]. Unlike classical public-key cryptography — which relies on the assumed intractability of problems such as integer factorization and discrete logarithms, and is therefore vulnerable to Shor's algorithm running on future fault-tolerant quantum computers [3] — QKD exploits the no-cloning theorem and measurement disturbance to detect eavesdropping with arbitrary reliability. The BB84 protocol [1] and its entanglement-based counterpart E91 [2] established the theoretical foundations; subsequent decades of research have produced protocols with progressively stronger security proofs, higher key rates, and more practical hardware requirements [4, 5].
 
 Despite these advances, practical QKD implementations face a persistent fundamental challenge: the trade-off between sifting efficiency and robustness against channel noise. BB84 discards approximately 50% of transmitted photons during the sifting phase due to basis mismatches — a waste that limits achievable key rates and increases the photon budget required for a given key length. SARG04 [6] improves resistance to photon number splitting (PNS) attacks with attenuated laser sources and achieves approximately 60% sifting efficiency, but at the cost of a more complex reconciliation phase. Neither protocol can dynamically adapt its operating mode in response to real-time channel conditions: both apply a fixed strategy regardless of whether the channel is pristine or severely degraded. In real-world deployments — where channel quality varies due to atmospheric turbulence, mechanical vibration in fiber spools, and thermal polarization drift — this rigidity means that protocols either sacrifice efficiency in clean channels or compromise security in noisy ones.
@@ -39,12 +39,12 @@ The principal contributions of this work are:
 \item Adaptive Mode Switching — dynamic per-block toggling between Efficient Mode (paired-state transmission with inconclusive-result rescue) and Verified Mode (BB84-equivalent), triggered by QBER thresholds calibrated to maintain security while maximizing throughput.
 \item QFlux Dashboard — GPU-accelerated real-time visualization at 29.8 FPS / 42.4 ms mean latency via PyQtGraph VBO rendering and asyncio WebSocket streaming with circular buffer memory management (385 MB steady-state, session-duration independent).
 \item Comprehensive Evaluation — 167 runs per (protocol, condition) combination across 5 QBER levels and 5 distances (4,175 total simulation runs), with statistical analysis, efficiency ratios, and improvement factors.
-\item Usability Validation — within-subjects HCI study (n = 12) demonstrating SUS = 82 (Excellent), 74% reduction in parameter tuning time, and 52% reduction in NASA-TLX cognitive workload.
+\item Real-Time Telemetry Benchmarking — comprehensive performance profiling demonstrating that QFlux achieves 29.8 FPS rendering at 30 Hz input (4.1% CPU utilization), 42.4 ms mean end-to-end latency, and bounded memory utilization (385 MB) independent of session duration.
 \end{itemize}
 
 
 \subsection{Paper Organization}
-Section 2 provides background on QKD protocols and quantum channel modeling. Section 3 presents the Aurora protocol in detail. Section 4 describes the QFlux system architecture. Section 5 covers the implementation. Section 6 presents comprehensive experimental results from the QBER sweep and distance sweep evaluations. Section 7 describes the QFlux usability study. Section 8 provides discussion. Section 9 concludes the paper.
+Section 2 provides background on QKD protocols and quantum channel modeling. Section 3 presents the Aurora protocol in detail. Section 4 describes the QFlux system architecture. Section 5 covers the implementation. Section 6 presents comprehensive experimental results from the QBER sweep and distance sweep evaluations. Section 7 presents QFlux real-time rendering performance and telemetry benchmarks. Section 8 provides discussion. Section 9 concludes the paper.
 
 \section{Background}
 \subsection{Quantum Key Distribution Fundamentals}
@@ -295,47 +295,17 @@ PNS attack resistance & Standard & Enhanced & CHSH-verified & Superior \\
 \end{tabular}
 \end{table}
 
-\section{QFlux Usability Study}
-\subsection{Study Design}
-We conducted a controlled within-subjects experiment comparing QFlux against a Matplotlib-based batch-processing baseline representing current standard practice in quantum communication simulation workflows. Twelve graduate researchers (7 male, 5 female; mean age 24.3 ± 1.8 years) enrolled in quantum communication or quantum networking courses participated. Each completed two sessions in counterbalanced order separated by a 48-hour washout period. All sessions used Aurora-QFlux with the Aurora protocol active, providing the most complex telemetry stream (mode switching, CHSH values, and all six standard metrics).
+\section{QFlux Telemetry and Rendering Performance}
+\subsection{Evaluation Methodology}
+To evaluate the computational efficiency and operational responsiveness of the QFlux visualization pipeline, we benchmarked QFlux against representative visualization frameworks commonly used in scientific simulation: Matplotlib (standard Python batch-processing baseline) and Plotly Dash (web-based reactive dashboard). Benchmarks were executed under controlled simulation throughput (30 Hz and 60 Hz telemetry packet emission rates) over extended 1-hour sessions streaming simulated Aurora protocol telemetry.
 
-\subsection{Tasks}
-\begin{itemize}
-\item T1 — Anomaly Detection: identify the time at which QBER first exceeds 10% during a 5-minute pre-recorded run (accuracy within ±5 seconds).
-\item T2 — Parameter Tuning: adjust attenuation and QBER parameters to drive Aurora below the EM→VM threshold (QBER < 3%) and maintain Efficient Mode for a continuous 2-minute window within 10 minutes.
-\item T3 — Comparative Analysis: identify qualitative differences in QBER evolution and mode-switching patterns between two simultaneous Aurora simulation channels.
-\end{itemize}
-
-
-\subsection{Measures}
-Task completion time (minutes), NASA-TLX composite workload score (0–100), and System Usability Scale (SUS) score (0–100). Statistical significance assessed via paired Wilcoxon signed-rank test with Bonferroni correction (α_corrected = 0.002); effect sizes via Cohen's d for paired samples.
-
-\subsection{Results}
-\captionof{table}{QFlux usability study results (mean ± SD, n = 12, all p < 0.001 after Bonferroni correction)}
-\begin{table}[hbt!]
-\centering
-\begin{tabular}{|c|c|c|c|c|}
-\hline
-\textbf{Measure} & \textbf{Baseline (Matplotlib)} & \textbf{QFlux} & \textbf{Change} & \textbf{Cohen's d} \\
-\hline
-T1 Anomaly detection (min) & 8.3 ± 1.8 & 2.1 ± 0.4 & −74.7% & 4.6 \\
-T2 Parameter tuning (min) & 12.5 ± 2.1 & 3.2 ± 0.7 & −74.4% & 5.3 \\
-T3 Comparison (min) & 15.2 ± 3.0 & 5.8 ± 1.1 & −61.8% & 4.1 \\
-NASA-TLX composite & 68.4 ± 7.3 & 32.8 ± 5.1 & −52.0% & 5.7 \\
-SUS score & 51.2 ± 8.4 & 82.0 ± 6.2 & +60.2% & 4.2 \\
-\hline
-\end{tabular}
-\end{table}
-
-The QFlux SUS score of 82.0 meets the Excellent threshold (> 80.3) [18]. All effect sizes exceed d = 4.0, indicating the QFlux advantage is not a marginal usability improvement but a categorical difference in interaction paradigm. Post-session qualitative feedback identified three most-valued features: continuous live QBER trace (11/12 participants), color-coded QBER threshold alerts (10/12), and the Aurora mode indicator panel showing EM/VM transitions in real time (9/12). The mode indicator panel was specific to the Aurora protocol and not available in the conference version; it was cited as enabling researchers to observe Aurora's adaptive behavior directly rather than inferring it from post-hoc log files.
-
-\subsection{QFlux Rendering Performance}
+\subsection{Benchmark Results}
 \captionof{table}{QFlux rendering performance versus baseline visualization frameworks}
 \begin{table}[hbt!]
 \centering
 \begin{tabular}{|c|c|c|c|c|c|}
 \hline
-\textbf{Framework} & \textbf{Input (Hz)} & \textbf{FPS} & \textbf{CPU (%)} & \textbf{Latency mean (ms)} & \textbf{Memory (MB, 1hr)} \\
+\textbf{Framework} & \textbf{Input (Hz)} & \textbf{FPS} & \textbf{CPU (\%)} & \textbf{Latency mean (ms)} & \textbf{Memory (MB, 1hr)} \\
 \hline
 Matplotlib (baseline) & 30 & 8.2 & 42 & N/A & >1900 \\
 Plotly Dash & 30 & 14.3 & 31 & N/A & N/A \\
@@ -344,6 +314,8 @@ QFlux (PyQtGraph) & 60 & 45.0 & 5.3 & N/A & 385 ± 4 \\
 \hline
 \end{tabular}
 \end{table}
+
+As shown in Table 7, QFlux delivers sustained 29.8 FPS rendering at 30 Hz input while consuming only 4.1\% CPU utilization, representing a 3.6× frame rate improvement and a 10× reduction in CPU overhead compared to Matplotlib (8.2 FPS, 42\% CPU). At 60 Hz input, QFlux scales smoothly to 45.0 FPS with 5.3\% CPU load. Mean end-to-end latency from packet emission to screen presentation is 42.4 ms, comfortably satisfying the sub-100 ms real-time responsiveness threshold. Circular buffer memory management successfully caps resident set size (RSS) at 385 ± 4 MB after initial warm-up, completely avoiding the unbounded memory growth observed in naive list-accumulation baselines (>1.9 GB after 1 hour).
 
 \section{Discussion}
 \subsection{Aurora's Efficiency-Security Trade-off}
@@ -358,14 +330,14 @@ The monotonically increasing sifting efficiency with QBER (89.0% at 2% → 93.8%
 The near-zero variation in final key yield across 5–50 km (std dev < 0.4 bits) confirms that the simulator correctly isolates the algorithmic component of protocol performance from physical channel attenuation effects. In real physical deployments, the 1,000-bit raw key would require exponentially more photon transmission time at longer distances: at α = 0.2 dB/km, a 50 km link has channel transmissivity T = 10^(−0.2×50/10) = 10^(−1) = 10%, meaning Alice must transmit approximately 10× more photon pulses to collect 1,000 detected photons at Bob. This physical effect — longer key accumulation time — is independent of the algorithmic post-processing results demonstrated here and would affect all three protocols equally.
 
 \subsection{QFlux as an Operational Research Platform}
-The usability study results demonstrate that QFlux's real-time visualization transforms Aurora parameter tuning from a 12.5-minute batch-process-inspect cycle to a 3.2-minute interactive process — a 4× throughput increase per experimental iteration. For Aurora specifically, the mode indicator panel and CHSH S-value display provide capabilities unavailable in any batch visualization tool: researchers can observe the protocol's adaptive behavior as it occurs, correlating mode switches with QBER transients in real time. This capability is essential for calibrating Aurora's mode-switching thresholds for specific deployment conditions.
+The benchmarking results demonstrate that QFlux's real-time visualization architecture transforms quantum simulation workflows from passive, post-hoc batch log inspection into an interactive operational environment. For Aurora specifically, the live mode indicator panel and continuous CHSH S-value telemetry stream provide real-time visibility into the protocol's adaptive dynamics: researchers can observe mode transitions as they occur, correlating EM/VM toggling with simulated channel transients in real time. Delivering telemetry at 42.4 ms mean latency with sub-5% CPU overhead ensures that operational monitoring does not bottleneck underlying protocol simulation or hardware communication layers.
 
 \subsection{Limitations}
 Three primary limitations warrant acknowledgment. First, Aurora's security proof for the Efficient Mode is not yet information-theoretically complete. The Rescue Protocol's probabilistic bit recovery introduces assumptions about the posterior distribution of Alice's bit value that require formal security analysis — particularly for adversarial scenarios where Eve controls the noise distribution. A full composable security proof for Aurora is identified as the highest-priority theoretical follow-up.
 
 Second, both Aurora and QFlux have been evaluated using simulated quantum channel telemetry. Hardware integration with commercial QKD platforms (ID Quantique Clavis³, Toshiba QKD appliance) is needed to validate end-to-end system performance under realistic physical-layer conditions including laser intensity fluctuations, detector after-pulsing, and clock synchronization errors.
 
-Third, the usability study sample (n = 12) limits generalizability. A larger study spanning diverse expertise levels and institutional contexts is needed to confirm the observed effect sizes.
+Third, while QFlux has been benchmarked extensively on local desktop hardware, deployment across distributed high-latency networks and heterogeneous multi-node quantum testbeds remains to be evaluated.
 
 \subsection{Future Work}
 \begin{itemize}
@@ -374,7 +346,7 @@ Third, the usability study sample (n = 12) limits generalizability. A larger stu
 \item Integration with NetSquid event-driven API for Aurora simulation at network scale (multi-node quantum networks [19]).
 \item Machine-learning-based adaptive threshold calibration: replacing fixed EM/VM thresholds with a learned policy trained on historical QBER distributions for a given deployment environment [20].
 \item Web-based QFlux frontend (WebGL rendering) for platform-independent remote monitoring of deployed QKD networks.
-\item Extended usability study (n ≥ 30) spanning diverse expertise levels, institutional contexts, and operating systems.
+\item Multi-user collaborative telemetry streaming and role-based access control for distributed QKD network control centers.
 \end{itemize}
 
 
@@ -383,16 +355,16 @@ This paper has presented Aurora-QFlux, an integrated full-stack framework combin
 
 Experimental evaluation across 5,010 simulation runs demonstrates that Aurora achieves 89.0%–93.8% sifting efficiency — nearly doubling BB84's 50.1% — and produces 2.45×–2.90× more final secure key bits across all tested noise levels (QBER 2%–11%), with the efficiency advantage growing as channel conditions deteriorate. At QBER = 15%, all protocols correctly terminate with zero key output, confirming correct security boundary enforcement. Distance sweep experiments confirm algorithmic stability with final key standard deviation below 0.4 bits across 5–50 km. Aurora's 4.40× computational overhead versus BB84 is partially amortized by its higher key yield, resulting in a 1.80× overhead per final key bit.
 
-QFlux delivers continuous telemetry visualization at 29.8 FPS and 42.4 ms mean end-to-end latency, satisfying the sub-100 ms real-time responsiveness criterion at the 99th percentile. Circular buffer memory management bounds session RSS at 385 MB independent of duration. A controlled usability study (n = 12) yields SUS = 82 (Excellent), 74% reduction in parameter tuning time, and 52% reduction in NASA-TLX cognitive workload (all p < 0.001, Cohen's d > 4.0), confirming that real-time visualization categorically transforms the quantum communication research workflow.
+QFlux delivers continuous telemetry visualization at 29.8 FPS and 42.4 ms mean end-to-end latency, satisfying the sub-100 ms real-time responsiveness criterion at the 99th percentile, with CPU utilization under 5% and memory bounded at 385 MB independent of duration. This performance demonstrates that GPU-accelerated telemetry streaming eliminates the latency bottlenecks of conventional batch-oriented QKD monitoring tools.
 
 Aurora-QFlux is implemented entirely in Python 3.11 with standard open-source libraries, ensuring broad accessibility. Its modular architecture enables independent extension of the protocol engine, communication layer, and visualization frontend. Source code and experimental data will be released as open-source upon acceptance of this manuscript. Aurora-QFlux provides the quantum communication community with a unified platform for adaptive protocol research and operational QKD network monitoring.
 
 \section{Declarations}
-\textbf{Ethical Approval  }The usability study was conducted with informed consent from all twelve participants. No personally identifiable data were collected. The study protocol was reviewed and approved by the Institutional Review Board of Amrita Vishwa Vidyapeetham, Mysuru (Protocol No.: [insert IRB reference before submission]).
+\textbf{Ethical Approval  }Not applicable. This study does not involve human participants or animal subjects; all experimental evaluations were conducted via numerical simulation and computational benchmarking.
 
 \textbf{Consent for Publication  }All authors consent to publication of this manuscript.
 
-\textbf{Availability of Data and Materials  }The Aurora-QFlux source code, simulation datasets (distance_sweep_runs.csv, qber_sweep_runs.csv), and anonymized usability study data are available from the corresponding author upon reasonable request. The authors intend to release the source code as an open-source GitHub repository and the datasets as supplementary files upon acceptance.
+\textbf{Availability of Data and Materials  }The Aurora-QFlux source code and simulation datasets (distance_sweep_runs.csv, qber_sweep_runs.csv) are available from the corresponding author upon reasonable request. The authors intend to release the source code as an open-source GitHub repository and the datasets as supplementary files upon acceptance.
 
 \textbf{Patent Disclosure  }A university patent application covering aspects of the Aurora adaptive QKD protocol has been filed with Amrita Vishwa Vidyapeetham (Application C102: 'A System and Method of Adaptive Quantum Key Distribution'). The present journal paper describes the simulation and visualization framework (Aurora-QFlux) in the context of the Aurora protocol. Patent applicants include Adwitiya Mukhopadhyay, Saadhan P, and Rashmitha S.
 
@@ -400,9 +372,9 @@ Aurora-QFlux is implemented entirely in Python 3.11 with standard open-source li
 
 \textbf{Funding  }This research received no specific grant from any funding agency in the public, commercial, or not-for-profit sectors. The open-access publication fee is covered by the institutional agreement between Amrita Vishwa Vidyapeetham and Springer Nature, under which article processing charges are waived for corresponding authors affiliated with Amrita Vishwa Vidyapeetham.
 
-\textbf{Author Contributions  }Adwitiya Mukhopadhyay: Conceptualization, Methodology, Supervision, Patent application, Writing – review and editing. Saadhan P: Software, Protocol implementation, Performance evaluation, Visualization (QFlux dashboard), Writing – original draft. Rashmitha S: Protocol co-design (Aurora), Usability study design and execution, Data curation, Statistical analysis, Writing – review and editing. All authors read and approved the final manuscript.
+\textbf{Author Contributions  }Adwitiya Mukhopadhyay: Conceptualization, Methodology, Supervision, Patent application, Writing – review and editing. Saadhan P: Software, Protocol implementation, Performance evaluation, Visualization (QFlux dashboard), Writing – original draft. Rashmitha S: Protocol co-design (Aurora), Experimental verification, Data curation, Statistical analysis, Writing – review and editing. All authors read and approved the final manuscript.
 
-\textbf{Acknowledgements  }The authors thank the twelve graduate researchers who participated in the usability study. The authors acknowledge the open-source developers of PyQtGraph, FastAPI, websockets, and PyQt5. The authors thank anonymous reviewers for constructive feedback.
+\textbf{Acknowledgements  }The authors acknowledge the open-source developers of PyQtGraph, FastAPI, websockets, and PyQt5. The authors thank anonymous reviewers for constructive feedback.
 
 \textbf{AI-Assisted Writing Disclosure  }AI-assisted writing tools were used during preparation of this manuscript for language refinement, structural organization, and formatting. All scientific content — protocol design, experimental methodology, data collection, analysis, and conclusions — is entirely the original work of the authors. The authors take full responsibility for accuracy, integrity, and originality. In accordance with Springer Nature's generative AI policy (2024), no AI tool is listed as an author.
 
@@ -427,7 +399,7 @@ Aurora-QFlux is implemented entirely in Python 3.11 with standard open-source li
 \bibitem{ref0ifptm} [15] Lucamarini M, Yuan ZL, Dynes JF, Shields AJ (2018) Overcoming the rate–distance limit of quantum key distribution without quantum repeaters. Nature 557:400–403. https://doi.org/10.1038/s41586-018-0066-6
 \bibitem{ref9qthf} [16] Pironio S et al (2009) Device-independent quantum key distribution secure against collective attacks. New J Phys 11:045021. https://doi.org/10.1088/1367-2630/11/4/045021
 \bibitem{reffk9y8} [17] Brassard G, Salvail L (1994) Secret-key reconciliation by public discussion. In: Advances in Cryptology — EUROCRYPT '93, Lecture Notes in Computer Science, vol 765. Springer, Berlin, pp 410–423
-\bibitem{ref8gsugp} [18] Bangor A, Kortum P, Miller J (2009) Determining what individual SUS scores mean: adding an adjective rating scale. J Usability Stud 4(3):114–123
+\bibitem{ref8gsugp} [18] Campagnola L (2014) Real-time scientific graphics and data acquisition with PyQtGraph. In: Proc. Python in Science Conf. (SciPy), Austin, TX
 \bibitem{refdav1hfk} [19] Wehner S, Elkouss D, Hanson R (2018) Quantum internet: a vision for the road ahead. Science 362(6412):eaam9288. https://doi.org/10.1126/science.aam9288
 \bibitem{refmq6r1h} [20] Dunjko V, Briegel HJ (2018) Machine learning and artificial intelligence in the quantum domain: a review of recent progress. Rep Prog Phys 81(7):074001. https://doi.org/10.1088/1361-6633/aab406
 \bibitem{refzm2g6} [21] Liao S-K et al (2017) Satellite-to-ground quantum key distribution. Nature 549:43–47. https://doi.org/10.1038/nature23655
@@ -435,8 +407,8 @@ Aurora-QFlux is implemented entirely in Python 3.11 with standard open-source li
 \bibitem{refv1gs9f} [23] Hunter JD (2007) Matplotlib: a 2D graphics environment. Comput Sci Eng 9(3):90–95. https://doi.org/10.1109/MCSE.2007.55
 \bibitem{refsccx9} [24] Campagnola L (2023) PyQtGraph: scientific graphics and GUI library for Python. https://www.pyqtgraph.org
 \bibitem{ref5ip744} [25] Fette I, Melnikov A (2011) The WebSocket protocol. IETF RFC 6455. https://doi.org/10.17487/RFC6455
-\bibitem{ref4kmuw} [26] Hart SG, Staveland LE (1988) Development of NASA-TLX (Task Load Index): results of empirical and theoretical research. In: Hancock PA, Meshkati N (eds) Human mental workload. North-Holland, Amsterdam, pp 139–183
-\bibitem{refrb2d7} [27] Brooke J (1996) SUS — a quick and dirty usability scale. In: Jordan PW et al (eds) Usability evaluation in industry. Taylor & Francis, London, pp 189–194
+\bibitem{ref4kmuw} [26] Diamanti E, Lo H-K, Qi B, Yuan Z (2016) Practical challenges in quantum key distribution. npj Quantum Inf 2:16025. https://doi.org/10.1038/npjqi.2016.25
+\bibitem{refrb2d7} [27] Pirandola S et al (2020) Advances in quantum cryptography. Adv Opt Photonics 12(4):1012–1236. https://doi.org/10.1364/AOP.361502
 \bibitem{refwrisxk} [28] Shneiderman B (1996) The eyes have it: a task by data type taxonomy for information visualizations. In: Proc. IEEE Symp. Visual Languages, pp 336–343. https://doi.org/10.1109/VL.1996.545307
 \bibitem{refozb5ul} [29] M R, Ramesha SS, Mukhopadhyay A (2025) QCAE-QOC-SVM: a hybrid quantum machine learning model for DoS and Fuzzy attack detection on autonomous vehicle CAN bus. MethodsX 15:103471
 \bibitem{refeji0na} [30] Mukhopadhyay A, Rao A, Joshi P, Harish V (2024) Edge based blind spot avoidance and speed monitoring for emergency vehicles. Procedia Comput Sci 235:284–302

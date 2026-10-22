@@ -127,11 +127,11 @@ const children = [
           "and produces 2.45×–2.90× more final secure key bits than BB84 across all tested noise "+
           "levels while maintaining security. At QBER = 15%, all protocols correctly abort with zero "+
           "key output, validating Aurora's security termination mechanisms. Distance sweeps confirm "+
-          "algorithmic stability (final key std dev < 0.4 bits across 5–50 km). A controlled "+
-          "usability study (n = 12) demonstrates that QFlux reduces parameter tuning time by 74% "+
-          "and NASA-TLX cognitive workload by 52% versus batch-processing baselines (SUS = 82, Excellent). "+
-          "Aurora-QFlux provides the quantum communication community with a unified protocol research "+
-          "and operational monitoring platform."
+          "algorithmic stability (final key std dev < 0.4 bits across 5–50 km). Computational "+
+          "benchmarks demonstrate that QFlux sustains 29.8 FPS rendering at 30 Hz input with 4.1% "+
+          "CPU utilization and bounded 385 MB memory footprint, overcoming the latency and throughput "+
+          "bottlenecks of batch-processing visualization frameworks. Aurora-QFlux provides the quantum "+
+          "communication community with a unified protocol research and operational monitoring platform."
         )]
       }),
       new Paragraph({
@@ -141,7 +141,7 @@ const children = [
         children:[rb("Keywords  "),
           r("Quantum Key Distribution · Aurora protocol · Adaptive hybrid protocol · BB84 · SARG04 · "+
             "CHSH inequality · Entanglement verification · Real-time visualization · WebSocket · "+
-            "GPU rendering · QFlux · Sifting efficiency · QBER · Post-processing · HCI · NASA-TLX")]
+            "GPU rendering · QFlux · Sifting efficiency · QBER · Post-processing · Telemetry benchmarking")]
       }),
 
       // ══════════════════════════════════════════════════════════════════
@@ -212,16 +212,17 @@ const children = [
       bul("Comprehensive Evaluation — 167 runs per (protocol, condition) combination across 5 QBER "+
           "levels and 5 distances (4,175 total simulation runs), with statistical analysis, efficiency "+
           "ratios, and improvement factors."),
-      bul("Usability Validation — within-subjects HCI study (n = 12) demonstrating SUS = 82 (Excellent), "+
-          "74% reduction in parameter tuning time, and 52% reduction in NASA-TLX cognitive workload."),
+      bul("Real-Time Telemetry Benchmarking — comprehensive performance profiling demonstrating that "+
+          "QFlux achieves 29.8 FPS rendering at 30 Hz input (4.1% CPU utilization), 42.4 ms mean "+
+          "end-to-end latency, and bounded memory utilization (385 MB) independent of session duration."),
       ...gap(1),
 
       sub("1.2  Paper Organization"),
       txt("Section 2 provides background on QKD protocols and quantum channel modeling. Section 3 "+
           "presents the Aurora protocol in detail. Section 4 describes the QFlux system architecture. "+
           "Section 5 covers the implementation. Section 6 presents comprehensive experimental results "+
-          "from the QBER sweep and distance sweep evaluations. Section 7 describes the QFlux usability "+
-          "study. Section 8 provides discussion. Section 9 concludes the paper."),
+          "from the QBER sweep and distance sweep evaluations. Section 7 presents QFlux real-time "+
+          "rendering performance and telemetry benchmarks. Section 8 provides discussion. Section 9 concludes the paper."),
 
       // ══════════════════════════════════════════════════════════════════
       // 2. BACKGROUND
@@ -682,61 +683,20 @@ const children = [
       ...gap(1),
 
       // ══════════════════════════════════════════════════════════════════
-      // 7. QFLUX USABILITY STUDY
+      // 7. QFLUX TELEMETRY AND RENDERING PERFORMANCE
       // ══════════════════════════════════════════════════════════════════
-      sec("7  QFlux Usability Study"),
+      sec("7  QFlux Telemetry and Rendering Performance"),
 
-      sub("7.1  Study Design"),
-      txt("We conducted a controlled within-subjects experiment comparing QFlux against "+
-          "a Matplotlib-based batch-processing baseline representing current standard "+
-          "practice in quantum communication simulation workflows. Twelve graduate researchers "+
-          "(7 male, 5 female; mean age 24.3 ± 1.8 years) enrolled in quantum communication "+
-          "or quantum networking courses participated. Each completed two sessions in "+
-          "counterbalanced order separated by a 48-hour washout period. All sessions used "+
-          "Aurora-QFlux with the Aurora protocol active, providing the most complex "+
-          "telemetry stream (mode switching, CHSH values, and all six standard metrics)."),
+      sub("7.1  Evaluation Methodology"),
+      txt("To evaluate the computational efficiency and operational responsiveness of the QFlux "+
+          "visualization pipeline, we benchmarked QFlux against representative visualization "+
+          "frameworks commonly used in scientific simulation: Matplotlib (standard Python "+
+          "batch-processing baseline) and Plotly Dash (web-based reactive dashboard). Benchmarks "+
+          "were executed under controlled simulation throughput (30 Hz and 60 Hz telemetry packet "+
+          "emission rates) over extended 1-hour sessions streaming simulated Aurora protocol telemetry."),
 
-      sub("7.2  Tasks"),
-      bul("T1 — Anomaly Detection: identify the time at which QBER first exceeds 10% during a 5-minute pre-recorded run (accuracy within ±5 seconds)."),
-      bul("T2 — Parameter Tuning: adjust attenuation and QBER parameters to drive Aurora below the EM→VM threshold (QBER < 3%) and maintain Efficient Mode for a continuous 2-minute window within 10 minutes."),
-      bul("T3 — Comparative Analysis: identify qualitative differences in QBER evolution and mode-switching patterns between two simultaneous Aurora simulation channels."),
-      ...gap(1),
-
-      sub("7.3  Measures"),
-      txt("Task completion time (minutes), NASA-TLX composite workload score (0–100), "+
-          "and System Usability Scale (SUS) score (0–100). Statistical significance "+
-          "assessed via paired Wilcoxon signed-rank test with Bonferroni correction "+
-          "(α_corrected = 0.002); effect sizes via Cohen's d for paired samples."),
-
-      sub("7.4  Results"),
-
-      tCap("Table 7  QFlux usability study results (mean ± SD, n = 12, all p < 0.001 after Bonferroni correction)"),
-      mkT(
-        ["Measure","Baseline (Matplotlib)","QFlux","Change","Cohen's d"],
-        [
-          ["T1 Anomaly detection (min)", "8.3 ± 1.8",  "2.1 ± 0.4",  "−74.7%", "4.6"],
-          ["T2 Parameter tuning (min)",  "12.5 ± 2.1", "3.2 ± 0.7",  "−74.4%", "5.3"],
-          ["T3 Comparison (min)",        "15.2 ± 3.0", "5.8 ± 1.1",  "−61.8%", "4.1"],
-          ["NASA-TLX composite",         "68.4 ± 7.3", "32.8 ± 5.1", "−52.0%", "5.7"],
-          ["SUS score",                  "51.2 ± 8.4", "82.0 ± 6.2", "+60.2%", "4.2"],
-        ],
-        [2200,1700,1500,1100,1138]
-      ),
-      ...gap(1),
-
-      txt("The QFlux SUS score of 82.0 meets the Excellent threshold (> 80.3) [18]. "+
-          "All effect sizes exceed d = 4.0, indicating the QFlux advantage is not a "+
-          "marginal usability improvement but a categorical difference in interaction "+
-          "paradigm. Post-session qualitative feedback identified three most-valued features: "+
-          "continuous live QBER trace (11/12 participants), color-coded QBER threshold "+
-          "alerts (10/12), and the Aurora mode indicator panel showing EM/VM transitions "+
-          "in real time (9/12). The mode indicator panel was specific to the Aurora protocol "+
-          "and not available in the conference version; it was cited as enabling researchers "+
-          "to observe Aurora's adaptive behavior directly rather than inferring it from "+
-          "post-hoc log files."),
-
-      sub("7.5  QFlux Rendering Performance"),
-      tCap("Table 8  QFlux rendering performance versus baseline visualization frameworks"),
+      sub("7.2  Benchmark Results"),
+      tCap("Table 7  QFlux rendering performance versus baseline visualization frameworks"),
       mkT(
         ["Framework","Input (Hz)","FPS","CPU (%)","Latency mean (ms)","Memory (MB, 1hr)"],
         [
@@ -748,6 +708,15 @@ const children = [
         [1900,1000,900,1000,1500,1338]
       ),
       ...gap(1),
+
+      txt("As shown in Table 7, QFlux delivers sustained 29.8 FPS rendering at 30 Hz input while "+
+          "consuming only 4.1% CPU utilization, representing a 3.6× frame rate improvement and a 10× "+
+          "reduction in CPU overhead compared to Matplotlib (8.2 FPS, 42% CPU). At 60 Hz input, "+
+          "QFlux scales smoothly to 45.0 FPS with 5.3% CPU load. Mean end-to-end latency from packet "+
+          "emission to screen presentation is 42.4 ms, comfortably satisfying the sub-100 ms real-time "+
+          "responsiveness threshold. Circular buffer memory management successfully caps resident set "+
+          "size (RSS) at 385 ± 4 MB after initial warm-up, completely avoiding the unbounded memory "+
+          "growth observed in naive list-accumulation baselines (>1.9 GB after 1 hour)."),
 
       // ══════════════════════════════════════════════════════════════════
       // 8. DISCUSSION
@@ -801,15 +770,15 @@ const children = [
           "and would affect all three protocols equally."),
 
       sub("8.4  QFlux as an Operational Research Platform"),
-      txt("The usability study results demonstrate that QFlux's real-time visualization "+
-          "transforms Aurora parameter tuning from a 12.5-minute batch-process-inspect "+
-          "cycle to a 3.2-minute interactive process — a 4× throughput increase per "+
-          "experimental iteration. For Aurora specifically, the mode indicator panel "+
-          "and CHSH S-value display provide capabilities unavailable in any batch "+
-          "visualization tool: researchers can observe the protocol's adaptive behavior "+
-          "as it occurs, correlating mode switches with QBER transients in real time. "+
-          "This capability is essential for calibrating Aurora's mode-switching thresholds "+
-          "for specific deployment conditions."),
+      txt("The benchmarking results demonstrate that QFlux's real-time visualization "+
+          "architecture transforms quantum simulation workflows from passive, post-hoc batch log "+
+          "inspection into an interactive operational environment. For Aurora specifically, the "+
+          "live mode indicator panel and continuous CHSH S-value telemetry stream provide real-time "+
+          "visibility into the protocol's adaptive dynamics: researchers can observe mode transitions "+
+          "as they occur, correlating EM/VM toggling with simulated channel transients in real time. "+
+          "Delivering telemetry at 42.4 ms mean latency with sub-5% CPU overhead ensures that "+
+          "operational monitoring does not bottleneck underlying protocol simulation or hardware "+
+          "communication layers."),
 
       sub("8.5  Limitations"),
       txt("Three primary limitations warrant acknowledgment. First, Aurora's security "+
@@ -824,9 +793,9 @@ const children = [
           "Clavis³, Toshiba QKD appliance) is needed to validate end-to-end system "+
           "performance under realistic physical-layer conditions including laser intensity "+
           "fluctuations, detector after-pulsing, and clock synchronization errors."),
-      txt("Third, the usability study sample (n = 12) limits generalizability. "+
-          "A larger study spanning diverse expertise levels and institutional contexts "+
-          "is needed to confirm the observed effect sizes."),
+      txt("Third, while QFlux has been benchmarked extensively on local desktop hardware, "+
+          "deployment across distributed high-latency networks and heterogeneous multi-node "+
+          "quantum testbeds remains to be evaluated."),
 
       sub("8.6  Future Work"),
       bul("Formal security proof for Aurora's Efficient Mode under composable security framework."),
@@ -834,7 +803,7 @@ const children = [
       bul("Integration with NetSquid event-driven API for Aurora simulation at network scale (multi-node quantum networks [19])."),
       bul("Machine-learning-based adaptive threshold calibration: replacing fixed EM/VM thresholds with a learned policy trained on historical QBER distributions for a given deployment environment [20]."),
       bul("Web-based QFlux frontend (WebGL rendering) for platform-independent remote monitoring of deployed QKD networks."),
-      bul("Extended usability study (n ≥ 30) spanning diverse expertise levels, institutional contexts, and operating systems."),
+      bul("Multi-user collaborative telemetry streaming and role-based access control for distributed QKD network control centers."),
       ...gap(1),
 
       // ══════════════════════════════════════════════════════════════════
@@ -861,12 +830,10 @@ const children = [
 
       txt("QFlux delivers continuous telemetry visualization at 29.8 FPS and 42.4 ms mean "+
           "end-to-end latency, satisfying the sub-100 ms real-time responsiveness criterion "+
-          "at the 99th percentile. Circular buffer memory management bounds session RSS at "+
-          "385 MB independent of duration. A controlled usability study (n = 12) yields "+
-          "SUS = 82 (Excellent), 74% reduction in parameter tuning time, and 52% reduction "+
-          "in NASA-TLX cognitive workload (all p < 0.001, Cohen's d > 4.0), confirming "+
-          "that real-time visualization categorically transforms the quantum communication "+
-          "research workflow."),
+          "at the 99th percentile, with CPU utilization under 5% and memory bounded at "+
+          "385 MB independent of duration. This performance demonstrates that GPU-accelerated "+
+          "telemetry streaming eliminates the latency bottlenecks of conventional batch-oriented "+
+          "QKD monitoring tools."),
 
       txt("Aurora-QFlux is implemented entirely in Python 3.11 with standard open-source "+
           "libraries, ensuring broad accessibility. Its modular architecture enables "+
@@ -881,17 +848,14 @@ const children = [
       // ══════════════════════════════════════════════════════════════════
       sec("Declarations"),
 
-      p([rb("Ethical Approval  "),r("The usability study was conducted with informed consent from all twelve participants. "+
-        "No personally identifiable data were collected. The study protocol was reviewed and approved by "+
-        "the Institutional Review Board of Amrita Vishwa Vidyapeetham, Mysuru "+
-        "(Protocol No.: [insert IRB reference before submission]).")]),
+      p([rb("Ethical Approval  "),r("Not applicable. This study does not involve human participants or animal subjects; "+
+        "all experimental evaluations were conducted via numerical simulation and computational benchmarking.")]),
 
       p([rb("Consent for Publication  "),r("All authors consent to publication of this manuscript.")]),
 
-      p([rb("Availability of Data and Materials  "),r("The Aurora-QFlux source code, simulation datasets "+
-        "(distance_sweep_runs.csv, qber_sweep_runs.csv), and anonymized usability study data are available "+
-        "from the corresponding author upon reasonable request. The authors intend to release the "+
-        "source code as an open-source GitHub repository and the datasets as supplementary files upon acceptance.")]),
+      p([rb("Availability of Data and Materials  "),r("The Aurora-QFlux source code and simulation datasets "+
+        "(distance_sweep_runs.csv, qber_sweep_runs.csv) are available from the corresponding author upon reasonable request. "+
+        "The authors intend to release the source code as an open-source GitHub repository and the datasets as supplementary files upon acceptance.")]),
 
       p([rb("Patent Disclosure  "),r("A university patent application covering aspects of the Aurora adaptive "+
         "QKD protocol has been filed with Amrita Vishwa Vidyapeetham (Application C102: "+
@@ -910,12 +874,11 @@ const children = [
       p([rb("Author Contributions  "),r("Adwitiya Mukhopadhyay: Conceptualization, Methodology, Supervision, "+
         "Patent application, Writing – review and editing. Saadhan P: Software, Protocol implementation, "+
         "Performance evaluation, Visualization (QFlux dashboard), Writing – original draft. "+
-        "Rashmitha S: Protocol co-design (Aurora), Usability study design and execution, "+
+        "Rashmitha S: Protocol co-design (Aurora), Experimental verification, "+
         "Data curation, Statistical analysis, Writing – review and editing. "+
         "All authors read and approved the final manuscript.")]),
 
-      p([rb("Acknowledgements  "),r("The authors thank the twelve graduate researchers who participated "+
-        "in the usability study. The authors acknowledge the open-source developers of PyQtGraph, "+
+      p([rb("Acknowledgements  "),r("The authors acknowledge the open-source developers of PyQtGraph, "+
         "FastAPI, websockets, and PyQt5. The authors thank anonymous reviewers for constructive feedback.")]),
 
       p([rb("AI-Assisted Writing Disclosure  "),r("AI-assisted writing tools were used during preparation of "+
@@ -953,7 +916,7 @@ const children = [
       ref("[15] Lucamarini M, Yuan ZL, Dynes JF, Shields AJ (2018) Overcoming the rate–distance limit of quantum key distribution without quantum repeaters. Nature 557:400–403. https://doi.org/10.1038/s41586-018-0066-6"),
       ref("[16] Pironio S et al (2009) Device-independent quantum key distribution secure against collective attacks. New J Phys 11:045021. https://doi.org/10.1088/1367-2630/11/4/045021"),
       ref("[17] Brassard G, Salvail L (1994) Secret-key reconciliation by public discussion. In: Advances in Cryptology — EUROCRYPT '93, Lecture Notes in Computer Science, vol 765. Springer, Berlin, pp 410–423"),
-      ref("[18] Bangor A, Kortum P, Miller J (2009) Determining what individual SUS scores mean: adding an adjective rating scale. J Usability Stud 4(3):114–123"),
+      ref("[18] Campagnola L (2014) Real-time scientific graphics and data acquisition with PyQtGraph. In: Proc. Python in Science Conf. (SciPy), Austin, TX"),
       ref("[19] Wehner S, Elkouss D, Hanson R (2018) Quantum internet: a vision for the road ahead. Science 362(6412):eaam9288. https://doi.org/10.1126/science.aam9288"),
       ref("[20] Dunjko V, Briegel HJ (2018) Machine learning and artificial intelligence in the quantum domain: a review of recent progress. Rep Prog Phys 81(7):074001. https://doi.org/10.1088/1361-6633/aab406"),
       ref("[21] Liao S-K et al (2017) Satellite-to-ground quantum key distribution. Nature 549:43–47. https://doi.org/10.1038/nature23655"),
@@ -961,8 +924,8 @@ const children = [
       ref("[23] Hunter JD (2007) Matplotlib: a 2D graphics environment. Comput Sci Eng 9(3):90–95. https://doi.org/10.1109/MCSE.2007.55"),
       ref("[24] Campagnola L (2023) PyQtGraph: scientific graphics and GUI library for Python. https://www.pyqtgraph.org"),
       ref("[25] Fette I, Melnikov A (2011) The WebSocket protocol. IETF RFC 6455. https://doi.org/10.17487/RFC6455"),
-      ref("[26] Hart SG, Staveland LE (1988) Development of NASA-TLX (Task Load Index): results of empirical and theoretical research. In: Hancock PA, Meshkati N (eds) Human mental workload. North-Holland, Amsterdam, pp 139–183"),
-      ref("[27] Brooke J (1996) SUS — a quick and dirty usability scale. In: Jordan PW et al (eds) Usability evaluation in industry. Taylor & Francis, London, pp 189–194"),
+      ref("[26] Diamanti E, Lo H-K, Qi B, Yuan Z (2016) Practical challenges in quantum key distribution. npj Quantum Inf 2:16025. https://doi.org/10.1038/npjqi.2016.25"),
+      ref("[27] Pirandola S et al (2020) Advances in quantum cryptography. Adv Opt Photonics 12(4):1012–1236. https://doi.org/10.1364/AOP.361502"),
       ref("[28] Shneiderman B (1996) The eyes have it: a task by data type taxonomy for information visualizations. In: Proc. IEEE Symp. Visual Languages, pp 336–343. https://doi.org/10.1109/VL.1996.545307"),
       ref("[29] M R, Ramesha SS, Mukhopadhyay A (2025) QCAE-QOC-SVM: a hybrid quantum machine learning model for DoS and Fuzzy attack detection on autonomous vehicle CAN bus. MethodsX 15:103471"),
       ref("[30] Mukhopadhyay A, Rao A, Joshi P, Harish V (2024) Edge based blind spot avoidance and speed monitoring for emergency vehicles. Procedia Comput Sci 235:284–302"),
