@@ -1,0 +1,76 @@
+{
+  "timestamp_utc": "2026-10-22T07:55:19.632109+00:00",
+  "git_hash": "1d6e193d113fb59cd9261a2b30331d5b15a10b78",
+  "python_interpreter": "/Users/saadhan/Drive/MCA_FInal_project/Qkd/.venv/bin/python",
+  "python_version": "3.13.5 | packaged by Anaconda, Inc. | (main, Jun 12 2025, 11:23:37) [Clang 14.0.6 ]",
+  "platform": {
+    "system": "Darwin",
+    "release": "27.0.0",
+    "machine": "arm64"
+  },
+  "pilot_parameters": {
+    "num_seeds": 20,
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19
+    ],
+    "num_blocks": 60,
+    "N": 2000000,
+    "R_rep_Hz": 100000000.0,
+    "scenarios": [
+      "bursty_noise",
+      "eve_episode",
+      "linear_ramp_loss",
+      "static_nominal",
+      "step_e_channel",
+      "step_loss"
+    ],
+    "strategies": [
+      "S0_conservative",
+      "S0_tuned",
+      "S1_0.7_conservative",
+      "S1_0.7_tuned",
+      "S1_0.9_conservative",
+      "S1_0.9_tuned",
+      "S2_adaptive",
+      "S3_oracle"
+    ],
+    "fixed_strategy_qtol_policies": [
+      "tuned",
+      "conservative_0.08"
+    ],
+    "total_epsilon_per_block": {
+      "eps_sec": 1e-10,
+      "eps_cor": 1e-10
+    },
+    "total_composite_epsilon_60_blocks": {
+      "eps_sec": 6e-09,
+      "eps_cor": 6e-09
+    }
+  },
+  "execution_time_seconds": 714.08,
+  "num_workers": 7,
+  "output_files": {
+    "per_block_csv": "experiments/results/raw_data/pilot_per_block.csv",
+    "per_run_csv": "experiments/results_final/pilot_per_run.csv",
+    "summary_csv": "experiments/results_final/pilot_summary.csv"
+  }
+}
