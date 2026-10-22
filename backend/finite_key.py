@@ -102,7 +102,7 @@ def compute_tlgr2012_key_length(
     observed_test_error: float,
     e_Z_est: float = 0.0,
     *,
-    ec_leakage_model: str = "q_tol",
+    ec_leakage_model: str = "predetermined_Qtol",
     f_ec: float = 1.16,
     eps_sec: float = 1e-10,
     eps_cor: float = 1e-10,
@@ -117,11 +117,11 @@ def compute_tlgr2012_key_length(
             mu := sqrt( (n + k) / (n * k) * (k + 1) / k * ln(4 / eps_sec) )
         Table I:
             The protocol aborts if observed_test_error > Q_tol.
-        Error Correction Leakage:
-            - When ec_leakage_model == "q_tol" (default, faithful to TLGR 2012 Table I / page 7):
+        Error Correction Leakage Conventions:
+            - 'predetermined_Qtol' (default, faithful to TLGR 2012 Table I / page 7):
                 leak_EC = f_ec * n * truncated_h2(Q_tol)
               Predetermined before transmission; matches the protocol family Phi[n,k,ell,Q_tol,eps_cor,leak_EC].
-            - When ec_leakage_model == "measured":
+            - 'measured_error' (empirical, labeled as NOT faithful to paper's pre-allocated protocol family):
                 leak_EC = f_ec * n * truncated_h2(e_Z_est)
               Computed from the empirical bit error sample.
 
@@ -138,8 +138,7 @@ def compute_tlgr2012_key_length(
     e_Z_est : float
         Estimated bit error rate on key bits (from sample).
     ec_leakage_model : str
-        "q_tol" (default) for paper-faithful predetermined leakage f_ec*n*h2(Q_tol),
-        or "measured" for sample-estimated leakage f_ec*n*h2(e_Z_est).
+        "predetermined_Qtol" (default, faithful) or "measured_error" (not faithful).
     f_ec : float
         Error correction efficiency factor (default 1.16, or 1.1 in Table II).
     eps_sec : float
@@ -155,7 +154,21 @@ def compute_tlgr2012_key_length(
         Dictionary containing key_length, aborted, and all audit parameters.
     """
     bound_id = "Tomamichel-Lim-Gisin-Renner 2012 Eq. (2)"
-    ec_convention = "predetermined_Q_tol" if ec_leakage_model == "q_tol" else "measured_sample"
+
+    # Resolve leakage model convention and fidelity flag
+    if ec_leakage_model in ("predetermined_Qtol", "q_tol"):
+        ec_convention = "predetermined_Qtol"
+        ec_faithful = True
+        h_bit = truncated_h2(Q_tol)
+    elif ec_leakage_model in ("measured_error", "measured"):
+        ec_convention = "measured_error"
+        ec_faithful = False
+        h_bit = truncated_h2(e_Z_est)
+    else:
+        raise ValueError(
+            f"Unknown ec_leakage_model: '{ec_leakage_model}'; "
+            f"must be 'predetermined_Qtol' (faithful) or 'measured_error' (unfaithful)"
+        )
 
     # Protocol abort rule: Table I (Parameter Estimation)
     if observed_test_error > Q_tol:
@@ -176,8 +189,9 @@ def compute_tlgr2012_key_length(
             "eps_cor": eps_cor,
             "f_ec": f_ec,
             "q": q,
-            "ec_leakage_model": ec_leakage_model,
+            "ec_leakage_model": ec_convention,
             "ec_leakage_convention": ec_convention,
+            "ec_faithful_to_paper": ec_faithful,
             "mu": compute_mu(n, k, eps_sec) if (n > 0 and k > 0) else math.inf,
             "leak_ec": 0.0,
             "delta_eps": 0.0,
@@ -199,8 +213,9 @@ def compute_tlgr2012_key_length(
             "eps_cor": eps_cor,
             "f_ec": f_ec,
             "q": q,
-            "ec_leakage_model": ec_leakage_model,
+            "ec_leakage_model": ec_convention,
             "ec_leakage_convention": ec_convention,
+            "ec_faithful_to_paper": ec_faithful,
             "mu": math.inf,
             "leak_ec": 0.0,
             "delta_eps": 0.0,
@@ -210,14 +225,6 @@ def compute_tlgr2012_key_length(
     mu = compute_mu(n, k, eps_sec)
     effective_phase_error = Q_tol + mu
     h_phase = truncated_h2(effective_phase_error)
-
-    # EC leakage calculation based on specified model
-    if ec_leakage_model == "q_tol":
-        h_bit = truncated_h2(Q_tol)
-    elif ec_leakage_model == "measured":
-        h_bit = truncated_h2(e_Z_est)
-    else:
-        raise ValueError(f"Unknown ec_leakage_model: {ec_leakage_model}; must be 'q_tol' or 'measured'")
 
     leak_ec = f_ec * n * h_bit
 
@@ -250,8 +257,9 @@ def compute_tlgr2012_key_length(
         "eps_cor": eps_cor,
         "f_ec": f_ec,
         "q": q,
-        "ec_leakage_model": ec_leakage_model,
+        "ec_leakage_model": ec_convention,
         "ec_leakage_convention": ec_convention,
+        "ec_faithful_to_paper": ec_faithful,
         "mu": mu,
         "effective_phase_error": effective_phase_error,
         "h_phase": h_phase,
@@ -286,7 +294,16 @@ def compute_tlgr2012_key_length_optimized(
         where: mu(eps) = sqrt( (n + k)/(n*k) * (k+1)/k * ln(1/eps) )
     """
     bound_id = "Tomamichel-Lim-Gisin-Renner 2012 Eq. (S3)"
-    ec_convention = "predetermined_Q_tol" if ec_leakage_model == "q_tol" else "measured_sample"
+    if ec_leakage_model in ("predetermined_Qtol", "q_tol"):
+        ec_convention = "predetermined_Qtol"
+        ec_faithful = True
+        h_bit = truncated_h2(Q_tol)
+    elif ec_leakage_model in ("measured_error", "measured"):
+        ec_convention = "measured_error"
+        ec_faithful = False
+        h_bit = truncated_h2(e_Z_est)
+    else:
+        raise ValueError(f"Unknown ec_leakage_model: {ec_leakage_model}")
 
     if observed_test_error > Q_tol:
         return {
@@ -303,8 +320,9 @@ def compute_tlgr2012_key_length_optimized(
             "eps_cor": eps_cor,
             "f_ec": f_ec,
             "q": q,
-            "ec_leakage_model": ec_leakage_model,
+            "ec_leakage_model": ec_convention,
             "ec_leakage_convention": ec_convention,
+            "ec_faithful_to_paper": ec_faithful,
             "mu": math.inf,
             "leak_ec": 0.0,
             "delta_eps": 0.0,
@@ -326,20 +344,14 @@ def compute_tlgr2012_key_length_optimized(
             "eps_cor": eps_cor,
             "f_ec": f_ec,
             "q": q,
-            "ec_leakage_model": ec_leakage_model,
+            "ec_leakage_model": ec_convention,
             "ec_leakage_convention": ec_convention,
+            "ec_faithful_to_paper": ec_faithful,
             "mu": math.inf,
             "leak_ec": 0.0,
             "delta_eps": 0.0,
             "raw_ell": 0.0,
         }
-
-    if ec_leakage_model == "q_tol":
-        h_bit = truncated_h2(Q_tol)
-    elif ec_leakage_model == "measured":
-        h_bit = truncated_h2(e_Z_est)
-    else:
-        raise ValueError(f"Unknown ec_leakage_model: {ec_leakage_model}")
 
     leak_ec = f_ec * n * h_bit
     log_cor = math.log2(2.0 / eps_cor)
@@ -383,6 +395,9 @@ def compute_tlgr2012_key_length_optimized(
         "eps_cor": eps_cor,
         "f_ec": f_ec,
         "q": q,
+        "ec_leakage_model": ec_convention,
+        "ec_leakage_convention": ec_convention,
+        "ec_faithful_to_paper": ec_faithful,
         "mu": best_mu,
         "effective_phase_error": Q_tol + best_mu,
         "leak_ec": leak_ec,

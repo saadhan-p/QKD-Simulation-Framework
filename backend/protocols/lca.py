@@ -67,8 +67,9 @@ def run_lca(
     k_x: int | None = None,
     # Finite-key security config (Tomamichel et al. 2012)
     Q_tol: float = 0.11,
-    ec_leakage_model: str = "q_tol",
+    ec_leakage_model: str = "predetermined_Qtol",
     f_ec: float = 1.16,
+
     eps_sec: float = 1e-10,
     eps_cor: float = 1e-10,
     q: float = 1.0,
@@ -341,6 +342,7 @@ def run_lca(
         "bound_source": fk_result["bound_source"],
         "ec_leakage_model": fk_result["ec_leakage_model"],
         "ec_leakage_convention": fk_result["ec_leakage_convention"],
+        "ec_faithful_to_paper": fk_result["ec_faithful_to_paper"],
         # Asymptotic results
         "r_asym": r_asym,
         "asymptotic_key_length": asymptotic_key_length,
