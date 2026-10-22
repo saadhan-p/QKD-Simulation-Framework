@@ -100,8 +100,9 @@ def compute_tlgr2012_key_length(
     k: int,
     Q_tol: float,
     observed_test_error: float,
-    e_Z_est: float,
+    e_Z_est: float = 0.0,
     *,
+    ec_leakage_model: str = "q_tol",
     f_ec: float = 1.16,
     eps_sec: float = 1e-10,
     eps_cor: float = 1e-10,
@@ -116,8 +117,13 @@ def compute_tlgr2012_key_length(
             mu := sqrt( (n + k) / (n * k) * (k + 1) / k * ln(4 / eps_sec) )
         Table I:
             The protocol aborts if observed_test_error > Q_tol.
-        Error Correction Leakage model:
-            leak_EC = f_ec * n * truncated_h2(e_Z_est)
+        Error Correction Leakage:
+            - When ec_leakage_model == "q_tol" (default, faithful to TLGR 2012 Table I / page 7):
+                leak_EC = f_ec * n * truncated_h2(Q_tol)
+              Predetermined before transmission; matches the protocol family Phi[n,k,ell,Q_tol,eps_cor,leak_EC].
+            - When ec_leakage_model == "measured":
+                leak_EC = f_ec * n * truncated_h2(e_Z_est)
+              Computed from the empirical bit error sample.
 
     Parameters
     ----------
@@ -131,8 +137,11 @@ def compute_tlgr2012_key_length(
         Observed error rate on the k test bits (phase error estimation).
     e_Z_est : float
         Estimated bit error rate on key bits (from sample).
+    ec_leakage_model : str
+        "q_tol" (default) for paper-faithful predetermined leakage f_ec*n*h2(Q_tol),
+        or "measured" for sample-estimated leakage f_ec*n*h2(e_Z_est).
     f_ec : float
-        Error correction efficiency factor (default 1.16).
+        Error correction efficiency factor (default 1.16, or 1.1 in Table II).
     eps_sec : float
         Secrecy parameter epsilon_sec (default 1e-10).
     eps_cor : float
@@ -146,6 +155,7 @@ def compute_tlgr2012_key_length(
         Dictionary containing key_length, aborted, and all audit parameters.
     """
     bound_id = "Tomamichel-Lim-Gisin-Renner 2012 Eq. (2)"
+    ec_convention = "predetermined_Q_tol" if ec_leakage_model == "q_tol" else "measured_sample"
 
     # Protocol abort rule: Table I (Parameter Estimation)
     if observed_test_error > Q_tol:
@@ -166,6 +176,8 @@ def compute_tlgr2012_key_length(
             "eps_cor": eps_cor,
             "f_ec": f_ec,
             "q": q,
+            "ec_leakage_model": ec_leakage_model,
+            "ec_leakage_convention": ec_convention,
             "mu": compute_mu(n, k, eps_sec) if (n > 0 and k > 0) else math.inf,
             "leak_ec": 0.0,
             "delta_eps": 0.0,
@@ -187,6 +199,8 @@ def compute_tlgr2012_key_length(
             "eps_cor": eps_cor,
             "f_ec": f_ec,
             "q": q,
+            "ec_leakage_model": ec_leakage_model,
+            "ec_leakage_convention": ec_convention,
             "mu": math.inf,
             "leak_ec": 0.0,
             "delta_eps": 0.0,
@@ -197,8 +211,14 @@ def compute_tlgr2012_key_length(
     effective_phase_error = Q_tol + mu
     h_phase = truncated_h2(effective_phase_error)
 
-    # EC leakage model: f_ec * n * h2(e_Z_est)
-    h_bit = truncated_h2(e_Z_est)
+    # EC leakage calculation based on specified model
+    if ec_leakage_model == "q_tol":
+        h_bit = truncated_h2(Q_tol)
+    elif ec_leakage_model == "measured":
+        h_bit = truncated_h2(e_Z_est)
+    else:
+        raise ValueError(f"Unknown ec_leakage_model: {ec_leakage_model}; must be 'q_tol' or 'measured'")
+
     leak_ec = f_ec * n * h_bit
 
     # Security cost term: log2(2 / (eps_sec^2 * eps_cor))
@@ -230,6 +250,8 @@ def compute_tlgr2012_key_length(
         "eps_cor": eps_cor,
         "f_ec": f_ec,
         "q": q,
+        "ec_leakage_model": ec_leakage_model,
+        "ec_leakage_convention": ec_convention,
         "mu": mu,
         "effective_phase_error": effective_phase_error,
         "h_phase": h_phase,
@@ -247,8 +269,9 @@ def compute_tlgr2012_key_length_optimized(
     k: int,
     Q_tol: float,
     observed_test_error: float,
-    e_Z_est: float,
+    e_Z_est: float = 0.0,
     *,
+    ec_leakage_model: str = "q_tol",
     f_ec: float = 1.16,
     eps_sec: float = 1e-10,
     eps_cor: float = 1e-10,
@@ -263,6 +286,7 @@ def compute_tlgr2012_key_length_optimized(
         where: mu(eps) = sqrt( (n + k)/(n*k) * (k+1)/k * ln(1/eps) )
     """
     bound_id = "Tomamichel-Lim-Gisin-Renner 2012 Eq. (S3)"
+    ec_convention = "predetermined_Q_tol" if ec_leakage_model == "q_tol" else "measured_sample"
 
     if observed_test_error > Q_tol:
         return {
@@ -279,6 +303,8 @@ def compute_tlgr2012_key_length_optimized(
             "eps_cor": eps_cor,
             "f_ec": f_ec,
             "q": q,
+            "ec_leakage_model": ec_leakage_model,
+            "ec_leakage_convention": ec_convention,
             "mu": math.inf,
             "leak_ec": 0.0,
             "delta_eps": 0.0,
@@ -300,13 +326,22 @@ def compute_tlgr2012_key_length_optimized(
             "eps_cor": eps_cor,
             "f_ec": f_ec,
             "q": q,
+            "ec_leakage_model": ec_leakage_model,
+            "ec_leakage_convention": ec_convention,
             "mu": math.inf,
             "leak_ec": 0.0,
             "delta_eps": 0.0,
             "raw_ell": 0.0,
         }
 
-    leak_ec = f_ec * n * truncated_h2(e_Z_est)
+    if ec_leakage_model == "q_tol":
+        h_bit = truncated_h2(Q_tol)
+    elif ec_leakage_model == "measured":
+        h_bit = truncated_h2(e_Z_est)
+    else:
+        raise ValueError(f"Unknown ec_leakage_model: {ec_leakage_model}")
+
+    leak_ec = f_ec * n * h_bit
     log_cor = math.log2(2.0 / eps_cor)
     ratio_total = (n + k) / (n * k)
     ratio_sample = (k + 1) / k
@@ -515,10 +550,29 @@ class History:
 
 @dataclass(frozen=True)
 class BlockParams:
-    """Parameters for the next block run."""
-    p_Z: float
+    """Parameters for the next block run.
+
+    Basis convention:
+    - p_key: probability of selecting the key extraction basis
+             (matches p_x in TLGR 2012, 1 - p in LCA 2005).
+    - p_test: probability of selecting the conjugate test basis
+             (matches p_z in TLGR 2012, p in LCA 2005).
+             p_test = 1.0 - p_key.
+    - Q_tol: channel phase error tolerance threshold fixed before the block run.
+    - N: total pulses to transmit.
+    """
+    p_key: float
     Q_tol: float
     N: int
+
+    @property
+    def p_test(self) -> float:
+        return 1.0 - self.p_key
+
+    @property
+    def p_Z(self) -> float:
+        """Alias for backward compatibility when Z is used as key basis."""
+        return self.p_key
 
 
 class Controller:
@@ -529,11 +583,27 @@ class Controller:
 
 class FixedController(Controller):
     """Trivial fixed-parameter controller."""
-    def __init__(self, p_Z: float, Q_tol: float, N: int):
-        self.p_Z = p_Z
+    def __init__(self, p_key: float | None = None, Q_tol: float = 0.03, N: int = 100_000, *, p_Z: float | None = None):
+        # Support both p_key and p_Z for smooth transition and compatibility
+        if p_key is not None:
+            self.p_key = p_key
+        elif p_Z is not None:
+            self.p_key = p_Z
+        else:
+            self.p_key = 0.5
+
         self.Q_tol = Q_tol
         self.N = N
 
+    @property
+    def p_Z(self) -> float:
+        return self.p_key
+
+    @property
+    def p_test(self) -> float:
+        return 1.0 - self.p_key
+
     def next_params(self, history: History) -> BlockParams:
         # History is inspected but fixed params are returned
-        return BlockParams(p_Z=self.p_Z, Q_tol=self.Q_tol, N=self.N)
+        return BlockParams(p_key=self.p_key, Q_tol=self.Q_tol, N=self.N)
+

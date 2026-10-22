@@ -20,8 +20,10 @@ htmlcov/
 logs/*.log
 *.log
 experiments/results/raw_data/*.csv
+!experiments/results/raw_data/task4_*.csv
 experiments/results/processed/*.csv
 experiments/results/figures/*.png
+
 
 # OS artefacts
 .DS_Store

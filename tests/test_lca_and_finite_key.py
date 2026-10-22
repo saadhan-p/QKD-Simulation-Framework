@@ -203,11 +203,17 @@ def test_task3d_finite_key_properties():
 # Task 3e: Reproduce published numerical example from Tomamichel et al. 2012 Table II
 # ===========================================================================
 def test_task3e_reproduce_published_table_ii():
-    """Reproduce Tomamichel et al. 2012 Table II for n = 10^6, Q = 1.0%, Q_tol = 1.73%."""
-    # From Tomamichel et al. 2012 Nature Communications Table II (page 7):
-    # n = 10^6, Q = 1.0%, r = 47.8%, r_rel = 57.1%, pz = 12.5%, Q_tol = 1.73%, eps_rob = 0.6%
-    # Security rate: eps / ell = 1e-14
-    # leak_EC = 1.1 * n * h(Q_tol)
+    """Reproduce Tomamichel et al. 2012 Table II for n = 10^6, Q = 1.0%, Q_tol = 1.73%.
+
+    Note on Table II math and EC leakage:
+    In Tomamichel et al. 2012 Nature Communications Table II (page 7):
+        n = 10^6, Q = 1.0%, r = 47.8%, r_rel = 57.1%, pz = 12.5%, Q_tol = 1.73%, eps_rob = 0.6%.
+    Although the text states 'leak_EC = xi * n * h(Q_tol) with xi = 1.1', the numerical rate
+    r = 47.8% reported in Table II mathematically matches leak_EC evaluated at the operating channel
+    error rate Q = 0.01 (1.1 * n * h(0.01)), yielding r = 47.82%.
+    If evaluated with predetermined Q_tol = 0.0173, the rate is r = 44.03%.
+    We verify both to document this exact distinction.
+    """
     n = 1_000_000
     pz = 0.125
     k = int(round(n * (pz / (1.0 - pz)) ** 2))  # k = 20408
@@ -215,28 +221,46 @@ def test_task3e_reproduce_published_table_ii():
     eps_sec = 6.28e-9  # corresponds to eps/ell = 1e-14 with ell ~ 6.28e5
     eps_cor = 1e-14
     eps_rob = 0.006
+    M = (math.sqrt(n) + math.sqrt(k)) ** 2
 
-    res = compute_tlgr2012_key_length(
+    # 1. Matching Table II published value (leak_EC at channel Q = 0.01)
+    res_published = compute_tlgr2012_key_length(
         n=n,
         k=k,
         Q_tol=Q_tol,
         observed_test_error=0.01,
         e_Z_est=0.01,
+        ec_leakage_model="measured",
         f_ec=1.1,
         eps_sec=eps_sec,
         eps_cor=eps_cor,
     )
-
-    ell = res["finite_key_length"]
-    M = (math.sqrt(n) + math.sqrt(k)) ** 2
-    r = (1.0 - eps_rob) * (ell / M)
+    ell_pub = res_published["finite_key_length"]
+    r_pub = (1.0 - eps_rob) * (ell_pub / M)
 
     # Published r in Table II is 47.8% (0.478)
-    assert abs(r - 0.478) < 0.01, f"Expected r near 47.8%, got {r * 100:.2f}%"
+    assert abs(r_pub - 0.478) < 0.01, f"Expected r near 47.8%, got {r_pub * 100:.2f}%"
 
     # Published r_rel = r / (1 - 2*h(0.01)) is 57.1% (0.571)
-    r_rel = r / (1.0 - 2.0 * truncated_h2(0.01))
+    r_rel = r_pub / (1.0 - 2.0 * truncated_h2(0.01))
     assert abs(r_rel - 0.571) < 0.01, f"Expected r_rel near 57.1%, got {r_rel * 100:.2f}%"
+
+    # 2. Fully predetermined Q_tol leakage (conservative security convention)
+    res_qtol = compute_tlgr2012_key_length(
+        n=n,
+        k=k,
+        Q_tol=Q_tol,
+        observed_test_error=0.01,
+        e_Z_est=0.01,
+        ec_leakage_model="q_tol",
+        f_ec=1.1,
+        eps_sec=eps_sec,
+        eps_cor=eps_cor,
+    )
+    ell_qtol = res_qtol["finite_key_length"]
+    r_qtol = (1.0 - eps_rob) * (ell_qtol / M)
+    assert abs(r_qtol - 0.4403) < 0.01, f"Expected Q_tol-based r near 44.0%, got {r_qtol * 100:.2f}%"
+
 
 
 # ===========================================================================
@@ -318,10 +342,72 @@ def test_task3g_security_interface_immutability_and_privacy():
             assert forbidden not in field.lower(), f"Forbidden field '{field}' found in public history!"
 
     # 4. Verify controller interface with FixedController
-    controller = FixedController(p_Z=0.85, Q_tol=0.03, N=200_000)
+    controller = FixedController(p_key=0.85, Q_tol=0.03, N=200_000)
     next_bp = controller.next_params(history)
 
     assert isinstance(next_bp, BlockParams)
-    assert next_bp.p_Z == 0.85
+    assert next_bp.p_key == 0.85
+    assert next_bp.p_test == pytest.approx(0.15)
+    assert next_bp.p_Z == 0.85  # alias
     assert next_bp.Q_tol == 0.03
     assert next_bp.N == 200_000
+
+
+# ===========================================================================
+# Task Follow-up: Basis naming mapping and EC leakage model verification
+# ===========================================================================
+def test_basis_naming_and_paper_notation_mapping():
+    """Verify p_key, p_test, and their exact mapping to TLGR 2012 and LCA 2005."""
+    # 1. TLGR 2012 Table II mapping:
+    # In TLGR 2012 Table II: test basis is Z with p_z = 0.125; key basis is X with p_x = 0.875.
+    tlgr_pz = 0.125
+    tlgr_px = 1.0 - tlgr_pz
+    bp_tlgr = BlockParams(p_key=tlgr_px, Q_tol=0.0173, N=1_000_000)
+    assert bp_tlgr.p_key == 0.875
+    assert bp_tlgr.p_test == pytest.approx(0.125)
+
+    # 2. LCA 2005 Protocol E mapping:
+    # In LCA 2005: rectilinear test basis is chosen with p = 0.1; key basis with 1 - p = 0.9.
+    lca_p = 0.10
+    bp_lca = BlockParams(p_key=1.0 - lca_p, Q_tol=0.02, N=100_000)
+    assert bp_lca.p_key == 0.90
+    assert bp_lca.p_test == pytest.approx(0.10)
+
+    # 3. Engine execution with p_key
+    rng = np.random.default_rng(1234)
+    res = run_lca(10_000, rng, p_key=0.80, eta_ch=1.0, eta_det=0.10, e_channel=0.01)
+    assert res["p_key"] == 0.80
+    assert res["p_test"] == pytest.approx(0.20)
+    assert res["p_Z"] == 0.80
+
+
+def test_ec_leakage_convention_comparison():
+    """Verify predetermined Q_tol leakage vs measured sample leakage."""
+    n = 100_000
+    k = 10_000
+    Q_tol = 0.03
+    e_Z_est = 0.015
+    f_ec = 1.16
+
+    # Model A: Predetermined Q_tol (default, security-relevant, faithful to TLGR 2012)
+    res_qtol = compute_tlgr2012_key_length(
+        n=n, k=k, Q_tol=Q_tol, observed_test_error=0.02, e_Z_est=e_Z_est,
+        ec_leakage_model="q_tol", f_ec=f_ec,
+    )
+    expected_leak_qtol = f_ec * n * truncated_h2(Q_tol)
+    assert res_qtol["leak_ec"] == pytest.approx(expected_leak_qtol)
+    assert res_qtol["ec_leakage_convention"] == "predetermined_Q_tol"
+
+    # Model B: Measured sample (empirical post-processing)
+    res_meas = compute_tlgr2012_key_length(
+        n=n, k=k, Q_tol=Q_tol, observed_test_error=0.02, e_Z_est=e_Z_est,
+        ec_leakage_model="measured", f_ec=f_ec,
+    )
+    expected_leak_meas = f_ec * n * truncated_h2(e_Z_est)
+    assert res_meas["leak_ec"] == pytest.approx(expected_leak_meas)
+    assert res_meas["ec_leakage_convention"] == "measured_sample"
+
+    # Since e_Z_est < Q_tol, leak_EC(Q_tol) > leak_EC(measured) -> Q_tol is strictly conservative
+    assert res_qtol["leak_ec"] > res_meas["leak_ec"]
+    assert res_qtol["finite_key_length"] <= res_meas["finite_key_length"]
+

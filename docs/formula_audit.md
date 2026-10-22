@@ -177,13 +177,53 @@ In *Security Analysis* and *Discussion* (pages 5 & 7):
 
 ---
 
-## 4. Tensions and Notational Conventions
+## 4. Tensions, Notational Conventions, and Table II Analysis
 
-1. **Basis labeling**:
-   - In LCA 2005: "rectilinear" is assigned probability $p$ and "diagonal" probability $1-p$. Key is distilled from the dominant basis (diagonal).
-   - In TLGR 2012: $X$ is used for raw key generation ($n$ bits) with probability $p_x = (1 + \sqrt{k/n})^{-1}$, and $Z$ is used for parameter estimation ($k$ bits) with probability $p_z$.
-   - In our engine convention (specified in TASK 1): $Z$ is the key generation basis (selected with probability $p_Z$), and $X$ is the phase-error parameter estimation basis (selected with probability $1 - p_Z$). The mathematics is completely symmetric under basis relabeling.
+### 1. Basis Naming and Tested Mapping to Literature
+- **Canonical Implementation Convention**:
+  - $p_{\text{key}}$: Probability that Alice and Bob independently choose the key extraction basis.
+  - $p_{\text{test}} = 1.0 - p_{\text{key}}$: Probability of choosing the conjugate parameter-estimation basis.
+- **Mapping to TLGR 2012** (Nature Communications 3:634):
+  - In TLGR 2012, raw key is extracted in basis $X$, so $p_{\text{key}} = p_x$.
+  - Conjugate test events are measured in basis $Z$, so $p_{\text{test}} = p_z$.
+  - In Table II, $p_z = 0.125 \implies p_{\text{test}} = 0.125 \implies p_{\text{key}} = 0.875$.
+- **Mapping to LCA 2005** (J. Cryptology 18:133):
+  - In LCA 2005 Protocol E, Alice chooses between rectilinear (prob $p$) and diagonal (prob $1-p$).
+  - Key is extracted from the dominant basis, so $p_{\text{key}} = 1 - p$ and $p_{\text{test}} = p$.
+- **Code Compatibility**:
+  - $p_Z$ is retained as an explicit alias for $p_{\text{key}}$. All tests and functions accept both $p_{\text{key}}$ and $p_Z$.
 
-2. **Error Correction Leakage**:
-   - In theoretical papers, $\text{leak}_{\text{EC}}$ is often budgeted in advance as $\xi n h_2(Q_{\text{tol}})$.
-   - In physical simulation with honest parameter estimation, $\text{leak}_{\text{EC}} = f_{\text{EC}} \cdot n \cdot h_2(e_{Z,\text{est}})$. Both models are documented and supported.
+### 2. Error Correction Leakage Convention
+- **Decision: Predetermined $Q_{\text{tol}}$ Leakage (`predetermined_Q_tol`)**:
+  - Expression: $\text{leak}_{\text{EC}} = f_{\text{EC}} \cdot n \cdot h_2(Q_{\text{tol}})$.
+  - **Rationale**:
+    1. **Paper Fidelity**: In TLGR 2012 Table I and Section *Protocol Definition*, the protocol family $\Phi[n, k, \ell, Q_{\text{tol}}, \epsilon_{\text{cor}}, \text{leak}_{\text{EC}}]$ is parameterized by a fixed, pre-allocated $\text{leak}_{\text{EC}}$ budgeted *prior* to transmission.
+    2. **Controller Alignment**: A security controller must commit to block parameters $(p_{\text{key}}, Q_{\text{tol}}, N)$ before seeing transmission outcomes; pre-allocating $\text{leak}_{\text{EC}}$ to the tolerance boundary guarantees that error reconciliation succeeds for all permissible error rates without leaking extra secrecy bits.
+- **Alternative: Measured Sample Leakage (`measured_sample`)**:
+  - Expression: $\text{leak}_{\text{EC}} = f_{\text{EC}} \cdot n \cdot h_2(e_{Z,\text{est}})$.
+  - Both conventions are explicitly implemented and labeled in `compute_tlgr2012_key_length`.
+
+### 3. Provenance of Parameters in TLGR 2012 Table II
+A careful audit of Table II in Tomamichel et al. (2012, page 7) reveals which parameters were explicitly printed vs inferred:
+- **Directly Printed in Table II**:
+  - Block size: $n \in \{10^4, 10^5, 10^6\}$.
+  - Channel bit error rate: $Q \in \{1.0\%, 2.5\%\}$.
+  - Expected secret key rate: $r$ (e.g., $47.8\%$ for $n=10^6, Q=1.0\%$).
+  - Relative rate: $r_{\text{rel}} := r / (1 - 2h(Q))$ (e.g., $57.1\%$).
+  - Basis probability: $p_z$ (e.g., $12.5\% \implies p_x = 87.5\%$).
+  - Error tolerance: $Q_{\text{tol}}$ (e.g., $1.73\%$).
+  - Robustness / abort budget: $\epsilon_{\text{rob}}$ (e.g., $0.6\%$).
+  - Stated in text: $\text{leak}_{\text{EC}} = \xi n h(Q_{\text{tol}})$ with $\xi = 1.1$; security rate $\epsilon / \ell = 10^{-14}$.
+- **Inferred from Protocol Formulas**:
+  - Test sample size $k$: Inferred from Table I formula $p_x = (1 + \sqrt{k/n})^{-1}$, yielding $\sqrt{k/n} = p_z / p_x = 0.125 / 0.875 = 1/7 \implies k = n / 49 \approx 20,408$.
+  - Total exchanged signals $M(n, k) = (\sqrt{n} + \sqrt{k})^2 = n (8/7)^2 = 1,306,122$.
+  - Total secrecy parameter $\epsilon_{\text{sec}}$: Inferred from rate $\epsilon / \ell = 10^{-14}$ at $\ell \approx 6.28 \times 10^5 \implies \epsilon_{\text{sec}} \approx 6.28 \times 10^{-9}$.
+  - Correctness parameter: $\epsilon_{\text{cor}} = 10^{-14}$ (negligible hash cost $\approx 47$ bits).
+- **Leakage Math in Table II**:
+  - The printed numerical rate $r = 47.8\%$ is produced when error correction leakage is evaluated at the operating channel QBER $Q = 0.01$ ($1.1 n h_2(0.01)$), yielding $r = 47.82\%$.
+  - If evaluated strictly with predetermined $Q_{\text{tol}} = 0.0173$, the rate is $r = 44.03\%$.
+
+### 4. Physical Driver: Detected Pulse Count $M_{\text{det}}$
+The true physical driver of the statistical fluctuation term $\mu$ is the number of **detected** pulses $M_{\text{det}} = N \cdot \eta_{\text{ch}} \eta_{\text{det}}$, not raw pulses sent $N$.
+Because $\mu \approx \sqrt{\frac{p_{\text{key}}^2 + p_{\text{test}}^2}{M_{\text{det}} p_{\text{key}}^2 p_{\text{test}}^2} \ln(4/\epsilon_{\text{sec}})}$, channel loss (fiber distance $L$) and detector efficiency $\eta_{\text{det}}$ shift the effective block size directly along the scaling curve of $M_{\text{det}}$.
+

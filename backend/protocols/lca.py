@@ -53,7 +53,8 @@ def run_lca(
     n_sent: int,
     rng: np.random.Generator,
     *,
-    p_Z: float = 0.5,
+    p_key: float | None = None,
+    p_Z: float | None = None,
     eta_ch: float = 1.0,
     eta_det: float = ETA_DET_DEFAULT,
     e_channel: float = E_CHANNEL_DEFAULT,
@@ -66,6 +67,7 @@ def run_lca(
     k_x: int | None = None,
     # Finite-key security config (Tomamichel et al. 2012)
     Q_tol: float = 0.11,
+    ec_leakage_model: str = "q_tol",
     f_ec: float = 1.16,
     eps_sec: float = 1e-10,
     eps_cor: float = 1e-10,
@@ -73,14 +75,33 @@ def run_lca(
 ) -> dict[str, Any]:
     """Run a faithful biased-basis BB84 (LCA) simulation block.
 
+    Basis Naming and Notation Mapping:
+    - p_key: Probability that Alice and Bob independently choose the key extraction basis.
+             * In TLGR 2012 (Table I, Nature Communications 3:634): key is extracted in basis X,
+               so p_key = p_x.
+             * In LCA 2005 (Protocol E, J. Cryptology 18:133): key is extracted in dominant basis,
+               so p_key = 1 - p.
+    - p_test: Probability of choosing conjugate test basis (p_test = 1.0 - p_key).
+             * In TLGR 2012: test basis is Z, so p_test = p_z.
+             * In LCA 2005: test basis is rectilinear, so p_test = p.
+    - p_Z: Backward-compatibility alias for p_key (representing key basis).
+
+    Error Correction Leakage Convention:
+    - ec_leakage_model == "q_tol" (default, faithful to TLGR 2012 Table I / page 7):
+        leak_EC = f_ec * n * h2(Q_tol). Predetermined before transmission.
+    - ec_leakage_model == "measured":
+        leak_EC = f_ec * n * h2(e_Z_est). Measured from the key-basis sample.
+
     Parameters
     ----------
     n_sent : int
         Number of optical pulses transmitted by Alice.
     rng : np.random.Generator
         Mandatory seeded NumPy Generator for reproducible physical Monte Carlo.
-    p_Z : float
-        Probability that Alice (and independently Bob) chooses basis Z (0 <= p_Z <= 1).
+    p_key : float | None
+        Probability of choosing key extraction basis (0 <= p_key <= 1, default 0.5).
+    p_Z : float | None
+        Alias for p_key.
     eta_ch : float
         Channel optical transmission factor (0 <= eta_ch <= 1).
     eta_det : float
@@ -101,6 +122,8 @@ def run_lca(
         Explicit number of XX events to test for phase error estimation (defaults to all XX).
     Q_tol : float
         Phase error tolerance threshold for finite-key abort check (default 0.11).
+    ec_leakage_model : str
+        "q_tol" (default) or "measured".
     f_ec : float
         Error correction efficiency factor (default 1.16).
     eps_sec : float
@@ -116,18 +139,28 @@ def run_lca(
         Dictionary reporting counts, error estimates, sifting efficiencies,
         finite-key bound, asymptotic rates, and all protocol parameters.
     """
-    if not (0.0 <= p_Z <= 1.0):
-        raise ValueError(f"p_Z must be in [0, 1]; got {p_Z}")
+    # Resolve p_key / p_Z alias
+    if p_key is not None:
+        eff_p_key = p_key
+    elif p_Z is not None:
+        eff_p_key = p_Z
+    else:
+        eff_p_key = 0.5
+
+    if not (0.0 <= eff_p_key <= 1.0):
+        raise ValueError(f"p_key must be in [0, 1]; got {eff_p_key}")
     if n_sent < 0:
         raise ValueError(f"n_sent must be non-negative; got {n_sent}")
+
+    eff_p_test = 1.0 - eff_p_key
 
     p_detect_photon = eta_ch * eta_det
     p_dark = dc * dt
 
     # 1. Alice raw data generation
-    # Basis 0 = Z, Basis 1 = X
+    # Basis 0 = Key basis (probability p_key), Basis 1 = Test basis (probability p_test)
     alice_bits = rng.integers(0, 2, size=n_sent, dtype=np.int8)
-    alice_bases = np.where(rng.random(n_sent) < p_Z, 0, 1).astype(np.int8)
+    alice_bases = np.where(rng.random(n_sent) < eff_p_key, 0, 1).astype(np.int8)
 
     # 2. Per-pulse channel detection and dark counts
     photon_detected = rng.random(n_sent) < p_detect_photon
@@ -135,8 +168,8 @@ def run_lca(
     click = photon_detected | dark_count
     n_detected = int(click.sum())
 
-    # 3. Bob basis choice (chosen independently with probability p_Z for Z)
-    bob_bases = np.where(rng.random(n_sent) < p_Z, 0, 1).astype(np.int8)
+    # 3. Bob basis choice (chosen independently with probability p_key for Key basis)
+    bob_bases = np.where(rng.random(n_sent) < eff_p_key, 0, 1).astype(np.int8)
 
     # 4. Bob measurement outcomes
     bob_bits = np.zeros(n_sent, dtype=np.int8)
@@ -259,6 +292,7 @@ def run_lca(
         Q_tol=Q_tol,
         observed_test_error=e_X_est,
         e_Z_est=e_Z_est,
+        ec_leakage_model=ec_leakage_model,
         f_ec=f_ec,
         eps_sec=eps_sec,
         eps_cor=eps_cor,
@@ -305,12 +339,17 @@ def run_lca(
         "leak_ec": fk_result["leak_ec"],
         "delta_eps": fk_result["delta_eps"],
         "bound_source": fk_result["bound_source"],
+        "ec_leakage_model": fk_result["ec_leakage_model"],
+        "ec_leakage_convention": fk_result["ec_leakage_convention"],
         # Asymptotic results
         "r_asym": r_asym,
         "asymptotic_key_length": asymptotic_key_length,
         "asymptotic_bits_per_pulse": asymptotic_bits_per_pulse,
-        # Parameters
-        "p_Z": p_Z,
+        # Basis parameters (primary and aliases)
+        "p_key": eff_p_key,
+        "p_test": eff_p_test,
+        "p_Z": eff_p_key,  # backward compatibility alias
+        # Channel & hardware parameters
         "eta_ch": eta_ch,
         "eta_det": eta_det,
         "e_channel": e_channel,
