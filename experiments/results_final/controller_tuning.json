@@ -1,0 +1,62 @@
+{
+  "timestamp_utc": "2026-10-22T07:31:29.913919+00:00",
+  "tuning_seed_set": [
+    1000,
+    1001,
+    1002
+  ],
+  "note": "Hyperparameters tuned ONLY on seeds >= 1000 and tuning scenario variants; evaluation strictly held out on seeds 0..S-1",
+  "selected_config_name": "responsive",
+  "hyperparameters": {
+    "W": 3,
+    "delta_ctrl": 0.1,
+    "margin": 0.008,
+    "delta_rel": 0.03,
+    "m_dwell": 1,
+    "dp_max": 0.15,
+    "Q_safe": 0.07,
+    "Q_safe_tol": 0.075,
+    "m_stable": 2,
+    "k_min": 50,
+    "default_qtol": 0.04
+  },
+  "evaluation_scores_on_tuning_set": {
+    "mean_yield_per_pulse": 0.002778822222222219,
+    "abort_rate": 0.02666666666666667,
+    "switches_per_run": 3.888888888888889
+  },
+  "all_candidate_evaluations": [
+    {
+      "name": "conservative",
+      "scores": {
+        "mean_yield_per_pulse": 0.0017120799999999989,
+        "abort_rate": 0.02666666666666667,
+        "switches_per_run": 2.6666666666666665
+      }
+    },
+    {
+      "name": "balanced_default",
+      "scores": {
+        "mean_yield_per_pulse": 0.002371431111111111,
+        "abort_rate": 0.02666666666666667,
+        "switches_per_run": 3.3333333333333335
+      }
+    },
+    {
+      "name": "responsive",
+      "scores": {
+        "mean_yield_per_pulse": 0.002778822222222219,
+        "abort_rate": 0.02666666666666667,
+        "switches_per_run": 3.888888888888889
+      }
+    },
+    {
+      "name": "cautious_margin",
+      "scores": {
+        "mean_yield_per_pulse": 0.00224535111111111,
+        "abort_rate": 0.02666666666666667,
+        "switches_per_run": 3.3333333333333335
+      }
+    }
+  ]
+}
